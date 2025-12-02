@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Professional Design System - Modern, Clean, High-end
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Clean, professional color palette */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    /* Primary Brand - Solid #FF2D55 */
+    --primary: 346 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 346 100% 50%;
+
+    /* Secondary - Minimal use */
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 0%;
+
+    /* Muted states */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 46%;
+
+    /* Accent */
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 0%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Clean borders - #E5E5E5 (even more subtle) */
+    --border: 0 0% 92%;
+    --input: 0 0% 92%;
+    --ring: 346 100% 59%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar colors */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 346 100% 59%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 90%;
+    --sidebar-ring: 346 100% 59%;
+
+    /* Consistent Spacing System */
+    --page-padding-x: 4rem;        /* 64px - Standard horizontal page padding */
+    --page-padding-y: 4rem;        /* 64px - Standard vertical page padding */
+    --section-gap: 2.5rem;         /* 40px - Gap between major sections */
+    --card-padding: 1.75rem;       /* 28px - Standard card internal padding */
+    --component-padding: 1.5rem;   /* 24px - Standard component padding */
+    --content-max-width: 1280px;   /* Maximum content width for readability */
+
+    /* Responsive Spacing Variables */
+    --page-padding-x-mobile: 1.25rem;  /* 20px mobile */
+    --page-padding-y-mobile: 2rem;     /* 32px mobile */
+    --page-padding-x-tablet: 2.5rem;   /* 40px tablet */
+    --page-padding-y-tablet: 3rem;     /* 48px tablet */
+
+    /* Transitions */
+    --transition-base: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Swipe animations */
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-shadow: none !important;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  
+  /* Typography System */
+  h1 {
+    @apply text-2xl font-medium tracking-tight;
+  }
+  
+  h2 {
+    @apply text-xl font-medium tracking-tight;
+  }
+  
+  h3 {
+    @apply text-lg font-medium tracking-tight;
+  }
+  
+  p {
+    @apply text-base leading-relaxed;
+  }
+  
+  /* Remove all shadows globally for clean, flat design */
+  button, 
+  input, 
+  select, 
+  textarea, 
+  [role="button"],
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: none !important;
+  }
+  
+  /* Smooth transitions for all interactive elements */
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"] {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Swipe animation utilities */
+  .animate-slide-in-left {
+    animation: slide-in-left 0.2s ease-out;
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-right 0.2s ease-out;
+  }
+}
