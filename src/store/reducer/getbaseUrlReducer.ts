@@ -8,7 +8,7 @@ const initialState: BaseUrlState = {
   url: "https://backend.coursex.us",
 };
 
-//
+// sdg
 // http://localhost:5001
 
 const getbaseUrlReducer = createSlice({
