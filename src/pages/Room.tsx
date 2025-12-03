@@ -835,7 +835,11 @@ const Room = () => {
 
       const handleUserRemoved = async (users: any) => {
         const leftUser = users[0];
-        if (isRecording) {
+        if (isRecording && !isHost) {
+          console.log("🛑 Stopping recording due to participant leaving");
+          setIsRecording(false);
+        }
+        if (isRecording && isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
 
           await api.post(
@@ -848,7 +852,6 @@ const Room = () => {
 
           stopRecordingDueToLeave(leftUser?.displayName);
         }
-
         updateParticipants();
       };
 
@@ -992,6 +995,16 @@ const Room = () => {
       if (meetingStatus !== "active") {
         navigate("/");
         return;
+      }
+      if (isRecording && isHost) {
+        await api.post(
+          `${baseURL}/v1/zoom/recording/participant-left`,
+          {
+            meetingName,
+          },
+          { withCredentials: true }
+        );
+        await stopRecordingDueToLeave(fullName);
       }
       setMeetingLeave(true);
       setMeetingStatus("leaving");

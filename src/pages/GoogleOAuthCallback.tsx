@@ -2,14 +2,16 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useSelector } from "react-redux";
-import { RootState } from "../store/store";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../store/store";
+import { fetchUser } from "../store/reducer/auth-slice";
 
 const GoogleOAuthCallback = () => {
   const [searchParams] = useSearchParams();
   const code = searchParams.get("code");
   const baseURL = useSelector((state: RootState) => state.baseUrl.url);
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
 
   const getToken = async (oauthCode: string) => {
     try {
@@ -20,7 +22,7 @@ const GoogleOAuthCallback = () => {
         },
         { withCredentials: true }
       );
-
+      dispatch(fetchUser(baseURL));
       if (response.data.verified) {
         if (response.data.details_added) {
           navigate("/");
