@@ -56,8 +56,8 @@ const Submitted = () => {
         <div className="flex gap-2 pt-2">
           <Button
             onClick={() => {
-              navigate("/");
               dispatch(fetchUser(baseURL));
+              navigate("/");
             }}
             className="flex-1 h-9 text-[13px]"
           >

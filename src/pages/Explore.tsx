@@ -32,6 +32,7 @@ import useAxios from "@/utils/useAxios";
 import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { DesktopOnlyModal } from "@/components/DesktopOnlyModal";
+import { toast } from "@/hooks/use-toast";
 
 const TOPICS = [
   {
@@ -468,6 +469,13 @@ const Explore = () => {
     } catch (error) {
       setLoading(false);
       console.error("Error creating meeting:", error);
+      toast({
+        title: `${
+          error.response.data.message ||
+          "Failed to create meeting. Please try again."
+        }`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -491,8 +499,8 @@ const Explore = () => {
 
   const joinMeeting = async () => {
     try {
-      setLoading(true);
       if (!roomId || !roomPassword) return;
+      setLoading(true);
       const response = await api.post(
         `${baseURL}/v1/zoom/meeting/joinMeeting/`,
         {
@@ -501,15 +509,22 @@ const Explore = () => {
         },
         { withCredentials: true }
       );
+      setLoading(false);
       navigate(
         `/room/${encodeURIComponent(roomId)}/${encodeURIComponent(
           roomPassword
         )}`
       );
-      setLoading(false);
     } catch (err) {
       setLoading(false);
       console.error("Error joining room:", err);
+      toast({
+        title: `${
+          err.response.data.message ||
+          "Failed to join meeting. Please try again."
+        }`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -521,7 +536,7 @@ const Explore = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <p className="text-xl font-semibold text-gray-800">
-            Creating Meeting wait...
+            Processing wait...
           </p>
           <p className="text-gray-600 mt-2"></p>
         </div>

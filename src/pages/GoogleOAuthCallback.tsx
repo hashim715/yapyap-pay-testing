@@ -43,7 +43,15 @@ const GoogleOAuthCallback = () => {
     }
   }, [code]);
 
-  return <h1>Processing GoogleOAuth Callback...</h1>;
+  return (
+    <div className="p-6 md:p-10 lg:p-14 flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <p className="text-xl font-semibold text-gray-800">Processing...</p>
+        <p className="text-gray-600 mt-2"></p>
+      </div>
+    </div>
+  );
 };
 
 export default GoogleOAuthCallback;

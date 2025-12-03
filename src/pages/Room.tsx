@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { KeyRound, X, Copy, Check, Link } from "lucide-react";
 import { ParticipantCard } from "@/components/ParticipantCard";
 import { TopicPanel } from "@/components/TopicPanel";
@@ -23,6 +23,8 @@ import { RootState } from "../store/store";
 import ZoomVideo from "@zoom/videosdk";
 import useAuth from "@/hooks/useAuth";
 import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
+import { useIsDesktop } from "@/hooks/useIsDesktop";
+import { DesktopOnlyModal } from "@/components/DesktopOnlyModal";
 
 const TOPICS = [
   {
@@ -595,6 +597,7 @@ const Room = () => {
   const { username: userName, name: fullName } = user;
 
   const [seconds, setSeconds] = useState(0);
+  const isDesktop = useIsDesktop();
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showEnableAudioDialog, setShowEnableAudioDialog] = useState(false);
   const [showRoomDetails, setShowRoomDetails] = useState(false);
@@ -608,6 +611,7 @@ const Room = () => {
   const [isJoining, setIsJoining] = useState(true);
   const [participants, setParticipants] = useState<any[]>([]);
   const [meetingStatus, setMeetingStatus] = useState("checking");
+  const [meetingLeave, setMeetingLeave] = useState(false);
 
   const baseURL = useSelector((state: RootState) => state.baseUrl.url);
 
@@ -622,19 +626,31 @@ const Room = () => {
   const [currentZoomUserId, setCurrentZoomUserId] = useState<any>(null);
   const [completedTopics, setCompletedTopics] = useState<number[]>([]);
 
-  const [selectedTopicIndex, setSelectedTopicIndex] = useState(0);
+  const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
   const [selectedSubtopicIndex, setSelectedSubtopicIndex] = useState<
     number | null
   >(null);
+  const [meetingStartTime, setMeetingStartTime] = useState<number | null>(null);
 
   const roomId = meetingName || "R-8492";
   const roomPassword = roomPasscode || "SECURE-2847";
 
   useEffect(() => {
-    if (!isJoining && meetingStatus === "active") {
-      timerRef.current = setInterval(() => {
-        setSeconds((prev) => prev + 1);
-      }, 1000);
+    if (!isDesktop) {
+      setShowDesktopOnlyModal(true);
+    }
+  }, [isDesktop]);
+
+  useEffect(() => {
+    if (!isJoining && meetingStatus === "active" && meetingStartTime) {
+      const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - meetingStartTime) / 1000);
+        setSeconds(elapsed);
+      };
+
+      updateTimer();
+
+      timerRef.current = setInterval(updateTimer, 1000);
     }
 
     return () => {
@@ -642,7 +658,7 @@ const Room = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [isJoining, meetingStatus]);
+  }, [isJoining, meetingStatus, meetingStartTime]);
 
   const checkingHostStatus = async () => {
     try {
@@ -666,8 +682,6 @@ const Room = () => {
         description: "Please check your credentials and try again.",
         variant: "destructive",
       });
-      navigate("/");
-      console.error("Error checking host status:", err);
       return null;
     }
   };
@@ -683,6 +697,7 @@ const Room = () => {
         const checkHost = await checkingHostStatus();
 
         if (checkHost === null) {
+          navigate("/");
           return;
         }
 
@@ -732,6 +747,7 @@ const Room = () => {
           meetingName,
           userName,
           isHost: checkHost,
+          timestamp: Date.now(),
         });
 
         setIsJoining(false);
@@ -740,6 +756,10 @@ const Room = () => {
           "✅ Successfully joined meeting as",
           checkHost ? "Host" : "Participant"
         );
+        toast({
+          title: "Successfully joined meeting",
+          variant: "default",
+        });
       } catch (error) {
         console.error("Error joining meeting:", error);
         toast({
@@ -865,6 +885,15 @@ const Room = () => {
   }, [isJoining, isRecording, meetingStatus, currentZoomUserId]);
 
   useEffect(() => {
+    socket.on("meeting-time-sync", (data: { startTime: number }) => {
+      setMeetingStartTime(data.startTime);
+    });
+
+    socket.on("connect", () => {
+      if (meetingName) {
+        socket.emit("request-meeting-time", { meetingName });
+      }
+    });
     socket.on("recording-started", (data) => {
       setIsRecording(true);
     });
@@ -876,8 +905,10 @@ const Room = () => {
     return () => {
       socket.off("recording-started");
       socket.off("recording-stopped");
+      socket.off("meeting-time-sync");
+      socket.off("connect");
     };
-  }, []);
+  }, [meetingName]);
 
   const stopRecordingDueToLeave = async (leftUserName: string) => {
     try {
@@ -931,17 +962,45 @@ const Room = () => {
     }
   };
 
+  const disableSession = async () => {
+    try {
+      const response = await api.post(
+        `${baseURL}/v1/zoom/meeting/leaveMeeting/`,
+        {
+          sessionName: meetingName,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        }
+      );
+      return response.data;
+    } catch (err) {
+      toast({
+        title: "Failed to leave meeting",
+        description: "Try again.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const leaveMeeting = async () => {
     try {
       if (meetingStatus !== "active") {
         navigate("/");
         return;
       }
-
+      setMeetingLeave(true);
       setMeetingStatus("leaving");
+      await disableSession();
       await leaveMeetingCleanup();
+      setMeetingLeave(false);
       navigate("/");
     } catch (error) {
+      setMeetingLeave(false);
       console.error("Error leaving meeting:", error);
       navigate("/");
     }
@@ -975,6 +1034,13 @@ const Room = () => {
     try {
       if (recordingClient) {
         if (isRecording) {
+          setCompletedTopics((prev) => [...prev, currentTopicIndex]);
+
+          if (currentTopicIndex < TOPICS.length - 1) {
+            setCurrentTopicIndex((prev) => prev + 1);
+            setSelectedSubtopicIndex(null);
+          }
+
           await recordingClient.stopCloudRecording();
           setIsRecording(false);
 
@@ -997,37 +1063,39 @@ const Room = () => {
             title: "Recording stopped",
             description: "Individual audio files will be available.",
           });
-
-          console.log(
-            "Recording stopped - individual audio files will be available"
-          );
         } else {
-          await recordingClient.startCloudRecording();
-          setIsRecording(true);
+          if (selectedSubtopicIndex !== null) {
+            await recordingClient.startCloudRecording();
+            setIsRecording(true);
 
-          await api.post(
-            `${baseURL}/v1/zoom/recording/start`,
-            {
+            await api.post(
+              `${baseURL}/v1/zoom/recording/start`,
+              {
+                meetingName,
+                participantCount: participants.length,
+              },
+              { withCredentials: true }
+            );
+
+            socket.emit("recording-started", {
               meetingName,
-              participantCount: participants.length,
-            },
-            { withCredentials: true }
-          );
+              startedBy: userName,
+              timestamp: new Date().toISOString(),
+            });
 
-          socket.emit("recording-started", {
-            meetingName,
-            startedBy: userName,
-            timestamp: new Date().toISOString(),
-          });
-
-          toast({
-            title: "Recording started",
-            description: "Each user's audio will be recorded separately.",
-          });
-
-          console.log(
-            "Recording started - each user's audio will be recorded separately"
-          );
+            toast({
+              title: "Recording started",
+              description: "Each user's audio will be recorded separately.",
+            });
+          } else {
+            toast({
+              title: "Select a sub-topic first",
+              description:
+                "Please choose a sub-topic before starting the recording.",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
     } catch (error: any) {
@@ -1049,34 +1117,6 @@ const Room = () => {
       "0"
     )}:${String(secs).padStart(2, "0")}`;
   };
-
-  // const handleToggleRecording = () => {
-  //   if (isRecording) {
-  //     // Stopping recording - advance to next topic
-  //     setIsRecording(false);
-
-  //     // Mark current topic as completed
-  //     setCompletedTopics((prev) => [...prev, currentTopicIndex]);
-
-  //     // Auto-advance to next topic if not the last one
-  //     if (currentTopicIndex < TOPICS.length - 1) {
-  //       setCurrentTopicIndex((prev) => prev + 1);
-  //       setSelectedSubtopicIndex(null); // Reset subtopic selection for new topic
-  //     }
-  //   } else {
-  //     // Starting recording - only allow if subtopic is selected
-  //     if (selectedSubtopicIndex !== null) {
-  //       setIsRecording(true);
-  //     } else {
-  //       toast({
-  //         title: "Select a sub-topic first",
-  //         description:
-  //           "Please choose a sub-topic before starting the recording.",
-  //         variant: "destructive",
-  //       });
-  //     }
-  //   }
-  // };
 
   const handleSubtopicSelect = (index: number) => {
     if (index === -1) {
@@ -1133,6 +1173,20 @@ const Room = () => {
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <p className="text-xl font-semibold text-gray-800">
             Joining meeting...
+          </p>
+          <p className="text-gray-600 mt-2">{meetingName}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (meetingLeave || meetingStatus === "leaving") {
+    return (
+      <div className="p-6 md:p-10 lg:p-14 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-xl font-semibold text-gray-800">
+            Leaving meeting...
           </p>
           <p className="text-gray-600 mt-2">{meetingName}</p>
         </div>
@@ -1229,7 +1283,7 @@ const Room = () => {
         <TopicPanel
           topics={TOPICS}
           isHost={isHost}
-          currentTopicIndex={0}
+          currentTopicIndex={currentTopicIndex}
           selectedSubtopicIndex={selectedSubtopicIndex}
           onSubtopicSelect={handleSubtopicSelect}
           completedTopics={completedTopics}
@@ -1395,16 +1449,15 @@ const Room = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Desktop Only Modal */}
-      {/* <DesktopOnlyModal
+      <DesktopOnlyModal
         open={showDesktopOnlyModal}
         onOpenChange={(open) => {
           setShowDesktopOnlyModal(open);
           if (!open && !isDesktop) {
-            navigate("/explore");
+            // navigate("/");
           }
         }}
-      /> */}
+      />
     </div>
   );
 };

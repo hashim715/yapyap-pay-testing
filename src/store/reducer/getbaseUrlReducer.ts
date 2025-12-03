@@ -5,11 +5,11 @@ interface BaseUrlState {
 }
 
 const initialState: BaseUrlState = {
-  url: "https://backend.coursex.us",
+  url: "http://localhost:5001",
 };
 
-// sdg
-// http://localhost:5001
+// https://backend.coursex.us
+//
 
 const getbaseUrlReducer = createSlice({
   name: "baseUrl",

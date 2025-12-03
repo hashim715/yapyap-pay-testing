@@ -6,12 +6,14 @@ import { Label } from "@/components/ui/label";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import axios from "axios";
+import { toast } from "@/hooks/use-toast";
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,14 +30,36 @@ const SignUp = () => {
 
   const handleSignInForGoogle = async () => {
     try {
+      setLoading(true);
       const response = await axios.get(`${baseURL}/v1/auth/google`, {
         headers: { "ngrok-skip-browser-warning": "true" },
       });
+      setLoading(false);
       window.location.replace(response.data.message);
     } catch (err) {
+      setLoading(false);
       console.log(err);
+      toast({
+        title: `${
+          err.response.data.message ||
+          "Failed to initiate Google sign-up. Please try again."
+        }`,
+        variant: "destructive",
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 md:p-10 lg:p-14 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600 mt-2"></p>
+          <p className="text-xl font-semibold text-gray-800">Processing...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6">

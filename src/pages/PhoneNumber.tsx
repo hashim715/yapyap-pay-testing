@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useSelector } from "react-redux";
 import { RootState } from "../store/store";
 import useAxios from "@/utils/useAxios";
+import { toast } from "@/hooks/use-toast";
 
 const countries = [
   { code: "+93", name: "Afghanistan", flag: "🇦🇫" },
@@ -198,6 +199,7 @@ const PhoneNumber = () => {
   const navigate = useNavigate();
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const baseURL = useSelector((state: RootState) => state.baseUrl.url);
   const api = useAxios();
@@ -206,9 +208,13 @@ const PhoneNumber = () => {
     e.preventDefault();
     try {
       if (!countryCode || !phoneNumber) {
-        alert("Please select a country code and enter a phone number.");
+        toast({
+          title: `Please select a country code and enter a phone number.`,
+          variant: "destructive",
+        });
         return;
       }
+      setLoading(true);
       const response = await api.post(
         `${baseURL}/v1/auth/send-verification-code/`,
         { phone_number: `${countryCode}${phoneNumber}` },
@@ -217,16 +223,35 @@ const PhoneNumber = () => {
           withCredentials: true,
         }
       );
-      alert("Verification code sent successfully.");
+      toast({
+        title: `Verification code sent successfully.`,
+        variant: "default",
+      });
+      setLoading(false);
       navigate(
         `/verify-phone/${encodeURIComponent(countryCode + "" + phoneNumber)}`
       );
     } catch (err) {
-      alert(
-        `${err.response.data.message || "Failed to send verification code."}`
-      );
+      setLoading(false);
+      toast({
+        title: `${
+          err.response.data.message || "Failed to send verification code."
+        }`,
+        variant: "destructive",
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 md:p-10 lg:p-14 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600 mt-2"></p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6">

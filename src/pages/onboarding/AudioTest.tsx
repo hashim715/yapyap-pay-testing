@@ -15,6 +15,7 @@ import useAxios from "@/utils/useAxios";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store/store";
 import { fetchUser } from "../../store/reducer/auth-slice";
+import { toast } from "@/hooks/use-toast";
 
 const AUDIO_TEST_SENTENCES: Record<string, string[]> = {
   English: [
@@ -163,6 +164,7 @@ const AudioTest = () => {
     null
   );
   const [playbackProgress, setPlaybackProgress] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -435,29 +437,29 @@ const AudioTest = () => {
   const handleContinue = async () => {
     if (!audioBlob) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      formStorage.update({
-        audioRecordingDuration: elapsed,
-        audioBase64: base64String,
-        audioMimeType: audioBlob.type,
-      });
-
-      if (isPlaying) {
-        audioElement.pause();
-        setIsPlaying(false);
-      }
-    };
-    reader.readAsDataURL(audioBlob);
-    const savedData = formStorage.get();
-
-    const formData = new FormData();
-    formData.append("backgroundInfo", JSON.stringify(savedData));
-    formData.append("audio_sample", audioBlob, "audio_sample.webm");
-    formData.append("audioDuration", String(elapsed));
-
     try {
+      setLoading(true);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        formStorage.update({
+          audioRecordingDuration: elapsed,
+          audioBase64: base64String,
+          audioMimeType: audioBlob.type,
+        });
+
+        if (isPlaying) {
+          audioElement.pause();
+          setIsPlaying(false);
+        }
+      };
+      reader.readAsDataURL(audioBlob);
+      const savedData = formStorage.get();
+
+      const formData = new FormData();
+      formData.append("backgroundInfo", JSON.stringify(savedData));
+      formData.append("audio_sample", audioBlob, "audio_sample.webm");
+      formData.append("audioDuration", String(elapsed));
       const response = await api.post(
         `${baseURL}/v1/user/addUserDetails/`,
         formData,
@@ -469,14 +471,37 @@ const AudioTest = () => {
         }
       );
       dispatch(fetchUser(baseURL));
+      setLoading(false);
+      toast({
+        title: `Application submitted successfully!.`,
+        variant: "default",
+      });
       navigate("/onboarding/submitted");
-      alert("Application submitted successfully!");
     } catch (err) {
-      alert(
-        "There was an error submitting your application. Please try again."
-      );
+      setLoading(false);
+      toast({
+        title: `${
+          err.response.data.message ||
+          "Failed to submit application. Please try again or check your details."
+        }`,
+        variant: "destructive",
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 md:p-10 lg:p-14 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600 mt-2"></p>
+          <p className="text-xl font-semibold text-gray-800">
+            Please wait while we submit your application...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

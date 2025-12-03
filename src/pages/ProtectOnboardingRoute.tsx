@@ -6,9 +6,35 @@ const ProtectOnboardingRoute = () => {
   const { user, loading } = useAuth();
   const { isOnline, hasInternet } = useOnline();
 
-  if (!isOnline) return <p>No Network..</p>;
+  if (!isOnline)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="text-center">
+          <h1 className="mb-4 text-4xl font-bold">503</h1>
+          <p className="mb-4 text-xl text-muted-foreground">
+            Oops! No internet connection
+          </p>
+          <a href="/" className="text-primary underline hover:text-primary/90">
+            Retry
+          </a>
+        </div>
+      </div>
+    );
 
-  if (!hasInternet) return <p>No internet access...</p>;
+  if (!hasInternet)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="text-center">
+          <h1 className="mb-4 text-4xl font-bold">503</h1>
+          <p className="mb-4 text-xl text-muted-foreground">
+            Oops! No internet connection
+          </p>
+          <a href="/" className="text-primary underline hover:text-primary/90">
+            Retry
+          </a>
+        </div>
+      </div>
+    );
 
   if (loading) {
     return (

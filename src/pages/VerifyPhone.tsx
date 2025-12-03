@@ -7,11 +7,13 @@ import { useSelector, useDispatch } from "react-redux";
 import useAxios from "@/utils/useAxios";
 import { fetchUser } from "../store/reducer/auth-slice";
 import { RootState, AppDispatch } from "../store/store";
+import { toast } from "@/hooks/use-toast";
 
 const VerifyPhone = () => {
   const navigate = useNavigate();
   const { phoneNumber } = useParams();
   const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const baseURL = useSelector((state: RootState) => state.baseUrl.url);
   const api = useAxios();
@@ -53,9 +55,14 @@ const VerifyPhone = () => {
     e.preventDefault();
     try {
       if (!code) {
-        alert("Please enter the verification code.");
+        toast({
+          title: `Please enter the verification code.`,
+          variant: "destructive",
+        });
         return;
       }
+
+      setLoading(true);
 
       const response = await api.post(
         `${baseURL}/v1/auth/verify-phone-number/`,
@@ -69,6 +76,11 @@ const VerifyPhone = () => {
       localStorage.removeItem(`otp_expiry_${phoneNumber}`);
 
       dispatch(fetchUser(baseURL));
+      setLoading(false);
+      toast({
+        title: "Verification code sent successfully",
+        variant: "default",
+      });
       if (!response.data.details_added) {
         navigate("/onboarding/welcome");
       } else if (!response.data.adminVerify) {
@@ -76,9 +88,15 @@ const VerifyPhone = () => {
       } else {
         navigate("/");
       }
-      alert("Verification code verified successfully.");
     } catch (err) {
-      alert("Failed to verify verification code.");
+      setLoading(false);
+      toast({
+        title: `${
+          err.response.data.message ||
+          "Failed to verify verification code. Try again"
+        }`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -87,10 +105,13 @@ const VerifyPhone = () => {
 
     try {
       if (!phoneNumber) {
-        alert("Please select a country code and enter a phone number.");
+        toast({
+          title: `Please select a country code and enter a phone number.`,
+          variant: "destructive",
+        });
         return;
       }
-
+      setLoading(true);
       const response = await api.post(
         `${baseURL}/v1/auth/send-verification-code/`,
         { phone_number: phoneNumber },
@@ -102,11 +123,33 @@ const VerifyPhone = () => {
       const newExpiry = Date.now() + 120000;
       localStorage.setItem(`otp_expiry_${phoneNumber}`, newExpiry.toString());
       setTimer(120);
-      alert("Verification code resent successfully.");
+      toast({
+        title: "Verification code resent successfully.",
+        variant: "default",
+      });
+      setLoading(false);
     } catch (err) {
-      alert("Failed to send verification code. Please try again.");
+      setLoading(false);
+      toast({
+        title: `${
+          err.response.data.message ||
+          "Failed to send verification code. Please try again."
+        }`,
+        variant: "destructive",
+      });
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 md:p-10 lg:p-14 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600 mt-2"></p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6">
