@@ -5,11 +5,11 @@ interface BaseUrlState {
 }
 
 const initialState: BaseUrlState = {
-  url: "https://backend.coursex.us",
+  url:
+    import.meta.env.VITE_NODE_ENV === "production"
+      ? "https://backend.coursex.us"
+      : "http://localhost:5001",
 };
-
-//
-// http://localhost:5001
 
 const getbaseUrlReducer = createSlice({
   name: "baseUrl",

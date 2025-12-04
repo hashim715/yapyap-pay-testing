@@ -80,7 +80,7 @@ export const CityAutocomplete = ({
           `text=${encodeURIComponent(searchQuery)}` +
           `&type=city` +
           `&format=json` +
-          `&apiKey=52a81e0423464794a2193a5ba9abfd3a`,
+          `&apiKey=${import.meta.env.VITE_GEO_APIFY_KEY}`,
         {
           method: "GET",
           signal: abortControllerRef.current.signal,

@@ -75,7 +75,6 @@ const JoinPage = () => {
         <p className="text-xl font-semibold text-foreground">
           Processing wait...
         </p>
-        <p className="text-sm text-muted-foreground mt-2">{meetingName}</p>
       </div>
     </div>
   );

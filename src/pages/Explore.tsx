@@ -528,6 +528,22 @@ const Explore = () => {
     }
   };
 
+  const handleCopyReferLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${baseURL}/signup`);
+      toast({
+        title: "Copied to clipboard",
+        description: `Refer Link has been copied successfully.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const canCreateRoom = selectedTopics.length === 5;
 
   if (loading) {
@@ -538,7 +554,6 @@ const Explore = () => {
           <p className="text-xl font-semibold text-gray-800">
             Processing wait...
           </p>
-          <p className="text-gray-600 mt-2"></p>
         </div>
       </div>
     );
@@ -581,6 +596,7 @@ const Explore = () => {
             <Button
               variant="outline"
               className="h-9 px-4 sm:px-5 text-[13px] flex-1 sm:flex-none"
+              onClick={handleCopyReferLink}
             >
               Refer a friend
             </Button>

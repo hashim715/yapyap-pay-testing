@@ -583,7 +583,10 @@ const TOPICS = [
   },
 ];
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL =
+  import.meta.env.VITE_NODE_ENV === "production"
+    ? import.meta.env.VITE_PROD_BACKEND_URL
+    : import.meta.env.VITE_DEV_BACKEND_URL;
 
 const socket = io(BACKEND_URL, {
   transports: ["websocket"],
@@ -750,6 +753,8 @@ const Room = () => {
           timestamp: Date.now(),
         });
 
+        socket.emit("request-topic-state", { meetingName });
+
         setIsJoining(false);
         setMeetingStatus("active");
         console.log(
@@ -905,11 +910,43 @@ const Room = () => {
       setIsRecording(false);
     });
 
+    socket.on(
+      "topic-changed",
+      (data: { topicIndex: number; subtopicIndex: number | null }) => {
+        setCurrentTopicIndex(data.topicIndex);
+        setSelectedSubtopicIndex(data.subtopicIndex);
+      }
+    );
+
+    socket.on(
+      "subtopic-selected",
+      (data: { topicIndex: number; subtopicIndex: number | null }) => {
+        setCurrentTopicIndex(data.topicIndex);
+        setSelectedSubtopicIndex(data.subtopicIndex);
+      }
+    );
+
+    socket.on(
+      "current-topic-state",
+      (data: {
+        topicIndex: number;
+        subtopicIndex: number | null;
+        completedTopics: number[];
+      }) => {
+        setCurrentTopicIndex(data.topicIndex);
+        setSelectedSubtopicIndex(data.subtopicIndex);
+        setCompletedTopics(data.completedTopics);
+      }
+    );
+
     return () => {
       socket.off("recording-started");
       socket.off("recording-stopped");
       socket.off("meeting-time-sync");
       socket.off("connect");
+      socket.off("topic-changed");
+      socket.off("subtopic-selected");
+      socket.off("current-topic-state");
     };
   }, [meetingName]);
 
@@ -1049,10 +1086,23 @@ const Room = () => {
         if (isRecording) {
           setCompletedTopics((prev) => [...prev, currentTopicIndex]);
 
+          const newTopicIndex =
+            currentTopicIndex < TOPICS.length - 1
+              ? currentTopicIndex + 1
+              : currentTopicIndex;
+
           if (currentTopicIndex < TOPICS.length - 1) {
             setCurrentTopicIndex((prev) => prev + 1);
             setSelectedSubtopicIndex(null);
           }
+
+          socket.emit("change-topic", {
+            meetingName,
+            topicIndex: newTopicIndex,
+            subtopicIndex: null,
+            completedTopics: [...completedTopics, currentTopicIndex],
+            changedBy: userName,
+          });
 
           await recordingClient.stopCloudRecording();
           setIsRecording(false);
@@ -1132,11 +1182,35 @@ const Room = () => {
   };
 
   const handleSubtopicSelect = (index: number) => {
+    if (!isHost) {
+      toast({
+        title: "Permission denied",
+        description: "Only the host can select topics.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (index === -1) {
       setSelectedSubtopicIndex(null);
     } else {
       setSelectedSubtopicIndex(index);
     }
+
+    socket.emit("select-subtopic", {
+      meetingName,
+      topicIndex: currentTopicIndex,
+      subtopicIndex: index === -1 ? null : index,
+      selectedBy: userName,
+    });
+
+    toast({
+      title: index === -1 ? "Subtopic cleared" : "Subtopic selected",
+      description:
+        index === -1
+          ? "Ready to select a new subtopic."
+          : `Subtopic ${index + 1} is now active.`,
+    });
   };
 
   const handleCopy = async (text: string, field: string) => {
@@ -1187,7 +1261,6 @@ const Room = () => {
           <p className="text-xl font-semibold text-gray-800">
             Joining meeting...
           </p>
-          <p className="text-gray-600 mt-2">{meetingName}</p>
         </div>
       </div>
     );
@@ -1201,7 +1274,6 @@ const Room = () => {
           <p className="text-xl font-semibold text-gray-800">
             Leaving meeting...
           </p>
-          <p className="text-gray-600 mt-2">{meetingName}</p>
         </div>
       </div>
     );
