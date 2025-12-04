@@ -677,14 +677,16 @@ const Explore = () => {
         </div>
       </PageSection>
 
-      <div className="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 z-50 px-4 w-full max-w-[400px]">
-        <Button
-          disabled={!canCreateRoom}
-          onClick={() => generateMeetingLink()}
-          className="w-full md:w-auto md:px-8 h-10 md:h-9 text-[13px] transition-all duration-200"
-        >
-          Create Room ({selectedTopics.length}/5)
-        </Button>
+      <div className="fixed bottom-6 md:bottom-10 left-0 right-0 z-50 flex justify-center">
+        <div className="w-full max-w-[var(--content-max-width)] px-[var(--page-padding-x-mobile)] md:px-[var(--page-padding-x-tablet)] lg:px-[var(--page-padding-x)] flex justify-center">
+          <Button
+            disabled={!canCreateRoom}
+            onClick={() => generateMeetingLink()}
+            className="w-full md:w-auto md:px-8 h-10 md:h-9 text-[13px] transition-all duration-200 max-w-[400px]"
+          >
+            Create Room ({selectedTopics.length}/5)
+          </Button>
+        </div>
       </div>
 
       <SwipeableDialog
