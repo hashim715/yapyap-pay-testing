@@ -956,11 +956,57 @@ const Room = () => {
     );
 
     socket.on("host-disconnected-rejoin-required", async (data) => {
-      toast({
-        title: "Host disconnected",
-        description: "Reconnecting to meeting...",
-      });
-      setRejoining(true);
+      if (!isHost) {
+        toast({
+          title: "Host disconnected",
+          description: "Reconnecting to meeting...",
+        });
+        setRejoining(true);
+        const client = clientRef.current;
+
+        if (!client) {
+          console.warn("Client not initialized during cleanup");
+          return;
+        }
+
+        const sessionInfo = client.getSessionInfo();
+        if (!sessionInfo) {
+          console.warn("No active session during cleanup");
+          return;
+        }
+
+        if (stream) {
+          try {
+            await stream.stopAudio();
+          } catch (audioError) {
+            console.warn("Error stopping audio:", audioError);
+          }
+        }
+
+        setAudioStarted(false);
+        setIsInitializingAudio(false);
+        setIsMuted(false);
+        setIsRecording(false);
+        setStream(null);
+        setRecordingClient(null);
+        await client.leave();
+        setMeetingStatus("checking");
+      }
+    });
+
+    socket.on("audio-unmute-during-recording", () => {
+      if (isHostRef.current) {
+        setParticipantAudioMute(false);
+      }
+    });
+
+    socket.on("audio-mute-during-recording", async (data) => {
+      if (isHostRef.current) {
+        setParticipantAudioMute(true);
+      }
+    });
+
+    socket.on("disconnect", async (reason) => {
       const client = clientRef.current;
 
       if (!client) {
@@ -989,79 +1035,7 @@ const Room = () => {
       setStream(null);
       setRecordingClient(null);
       await client.leave();
-      setMeetingStatus("checking");
-    });
-
-    socket.on("audio-unmute-during-recording", () => {
-      if (isHostRef.current) {
-        setParticipantAudioMute(false);
-      }
-    });
-
-    socket.on("audio-mute-during-recording", async (data) => {
-      if (isHostRef.current) {
-        setParticipantAudioMute(true);
-      }
-    });
-
-    socket.on("disconnect", async (reason) => {
-      console.log("🔌 Socket disconnected:", reason);
-
-      if (meetingStatus === "active") {
-        toast({
-          title: "Connection lost",
-          description: "You've been disconnected from the meeting.",
-          variant: "destructive",
-        });
-
-        try {
-          const client = clientRef.current;
-
-          if (client) {
-            const sessionInfo = client.getSessionInfo();
-
-            if (sessionInfo && stream) {
-              try {
-                await stream.stopAudio();
-              } catch (audioError) {
-                console.warn(
-                  "Error stopping audio during disconnect:",
-                  audioError
-                );
-              }
-            }
-
-            try {
-              await client.leave();
-            } catch (leaveError) {
-              console.warn("Error leaving during disconnect:", leaveError);
-            }
-          }
-
-          setAudioStarted(false);
-          setIsInitializingAudio(false);
-          setIsMuted(false);
-          setIsRecording(false);
-          setStream(null);
-          setRecordingClient(null);
-          setParticipants([]);
-          setParticipantCount(0);
-          setMeetingStatus("idle");
-          setIsJoining(false);
-
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-
-          setTimeout(() => {
-            navigate("/");
-          }, 2000);
-        } catch (error) {
-          console.error("Error during disconnect cleanup:", error);
-          navigate("/");
-        }
-      }
+      navigate("/");
     });
 
     return () => {
