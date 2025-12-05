@@ -1007,46 +1007,47 @@ const Room = () => {
     });
 
     socket.on("disconnect", async (reason) => {
-      if (isRecording && isHost) {
-        await api.post(
-          `${baseURL}/v1/zoom/recording/participant-left`,
-          {
-            meetingName,
-          },
-          { withCredentials: true }
-        );
-        await stopRecordingDueToLeave(fullName);
-      }
+      // if (isRecording && isHost) {
+      //   await api.post(
+      //     `${baseURL}/v1/zoom/recording/participant-left`,
+      //     {
+      //       meetingName,
+      //     },
+      //     { withCredentials: true }
+      //   );
+      //   await stopRecordingDueToLeave(fullName);
+      // }
 
-      const client = clientRef.current;
+      // const client = clientRef.current;
 
-      if (!client) {
-        console.warn("Client not initialized during cleanup");
-        return;
-      }
+      // if (!client) {
+      //   console.warn("Client not initialized during cleanup");
+      //   return;
+      // }
 
-      const sessionInfo = client.getSessionInfo();
-      if (!sessionInfo) {
-        console.warn("No active session during cleanup");
-        return;
-      }
+      // const sessionInfo = client.getSessionInfo();
+      // if (!sessionInfo) {
+      //   console.warn("No active session during cleanup");
+      //   return;
+      // }
 
-      if (stream) {
-        try {
-          await stream.stopAudio();
-        } catch (audioError) {
-          console.warn("Error stopping audio:", audioError);
-        }
-      }
+      // if (stream) {
+      //   try {
+      //     await stream.stopAudio();
+      //   } catch (audioError) {
+      //     console.warn("Error stopping audio:", audioError);
+      //   }
+      // }
 
-      setAudioStarted(false);
-      setIsInitializingAudio(false);
-      setIsMuted(false);
-      setIsRecording(false);
-      setStream(null);
-      setRecordingClient(null);
-      await client.leave();
-      navigate("/");
+      // setAudioStarted(false);
+      // setIsInitializingAudio(false);
+      // setIsMuted(false);
+      // setIsRecording(false);
+      // setStream(null);
+      // setRecordingClient(null);
+      // await client.leave();
+      // navigate("/");
+      window.location.reload();
     });
 
     return () => {
