@@ -1028,6 +1028,17 @@ const Room = () => {
         }
       }
 
+      if (isRecording && isHost) {
+        await api.post(
+          `${baseURL}/v1/zoom/recording/participant-left`,
+          {
+            meetingName,
+          },
+          { withCredentials: true }
+        );
+        await stopRecordingDueToLeave(fullName);
+      }
+
       setAudioStarted(false);
       setIsInitializingAudio(false);
       setIsMuted(false);
