@@ -838,6 +838,76 @@ const Room = () => {
     }
   }, [stream, meetingStatus, audioStarted]);
 
+  // useEffect(() => {
+  //   const client = clientRef.current;
+
+  //   if (!isJoining && meetingStatus === "active") {
+  //     const handleActiveSpeaker = (payload: any) => {
+  //       payload.forEach((element: any) => {
+  //         const activeSpeakerId = element.userId;
+  //         setParticipants((prev) =>
+  //           prev.map((p) => ({
+  //             ...p,
+  //             isSpeaking: p.zoomUserId === activeSpeakerId,
+  //           }))
+  //         );
+  //       });
+  //     };
+
+  //     const handleUserRemoved = async (users: any) => {
+  //       const leftUser = users[0];
+  //       if (isRecording && !isHost) {
+  //         console.log("🛑 Stopping recording due to participant leaving");
+  //         setIsRecording(false);
+  //       }
+  //       if (isRecording && isHost) {
+  //         console.log("🛑 Stopping recording due to participant leaving");
+
+  //         await api.post(
+  //           `${baseURL}/v1/zoom/recording/participant-left`,
+  //           {
+  //             meetingName,
+  //           },
+  //           { withCredentials: true }
+  //         );
+
+  //         stopRecordingDueToLeave(leftUser?.displayName);
+  //       }
+  //       updateParticipants();
+  //     };
+
+  //     const updateParticipants = () => {
+  //       const users = client.getAllUser();
+  //       setParticipantCount(users.length);
+
+  //       const mappedParticipants = users.map((user: any, index: number) => ({
+  //         id: user.userId,
+  //         name: user.displayName || `Participant ${index + 1}`,
+  //         zoomUserId: user.userId,
+  //         type: user.userId === currentZoomUserId ? "user" : "speaker",
+  //         isCurrentUser: user.userId === currentZoomUserId,
+  //         isSpeaking: false,
+  //       }));
+
+  //       setParticipants(mappedParticipants);
+  //     };
+
+  //     client.on("active-speaker", handleActiveSpeaker);
+  //     client.on("user-added", updateParticipants);
+  //     client.on("user-removed", handleUserRemoved);
+  //     client.on("user-updated", updateParticipants);
+
+  //     updateParticipants();
+
+  //     return () => {
+  //       client.off("active-speaker", handleActiveSpeaker);
+  //       client.off("user-added", updateParticipants);
+  //       client.off("user-removed", handleUserRemoved);
+  //       client.off("user-updated", updateParticipants);
+  //     };
+  //   }
+  // }, [isJoining, isRecording, meetingStatus, currentZoomUserId]);
+
   useEffect(() => {
     const client = clientRef.current;
 
@@ -855,11 +925,14 @@ const Room = () => {
       };
 
       const handleUserRemoved = async (users: any) => {
+        console.log("👋 User removed event fired:", users);
         const leftUser = users[0];
+
         if (isRecording && !isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
           setIsRecording(false);
         }
+
         if (isRecording && isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
 
@@ -873,6 +946,7 @@ const Room = () => {
 
           stopRecordingDueToLeave(leftUser?.displayName);
         }
+
         updateParticipants();
       };
 
@@ -892,10 +966,20 @@ const Room = () => {
         setParticipants(mappedParticipants);
       };
 
+      const handleConnectionChange = (payload: any) => {
+        updateParticipants();
+      };
+
+      const handlePeerVideoStateChange = (payload: any) => {
+        updateParticipants();
+      };
+
       client.on("active-speaker", handleActiveSpeaker);
       client.on("user-added", updateParticipants);
       client.on("user-removed", handleUserRemoved);
       client.on("user-updated", updateParticipants);
+      client.on("connection-change", handleConnectionChange);
+      client.on("peer-video-state-change", handlePeerVideoStateChange);
 
       updateParticipants();
 
@@ -904,9 +988,11 @@ const Room = () => {
         client.off("user-added", updateParticipants);
         client.off("user-removed", handleUserRemoved);
         client.off("user-updated", updateParticipants);
+        client.off("connection-change", handleConnectionChange);
+        client.off("peer-video-state-change", handlePeerVideoStateChange);
       };
     }
-  }, [isJoining, isRecording, meetingStatus, currentZoomUserId]);
+  }, [isJoining, isRecording, meetingStatus, currentZoomUserId, isHost]);
 
   useEffect(() => {
     socket.on("meeting-time-sync", (data: { startTime: number }) => {
@@ -1007,46 +1093,6 @@ const Room = () => {
     });
 
     socket.on("disconnect", async (reason) => {
-      // if (isRecording && isHost) {
-      //   await api.post(
-      //     `${baseURL}/v1/zoom/recording/participant-left`,
-      //     {
-      //       meetingName,
-      //     },
-      //     { withCredentials: true }
-      //   );
-      //   await stopRecordingDueToLeave(fullName);
-      // }
-
-      // const client = clientRef.current;
-
-      // if (!client) {
-      //   console.warn("Client not initialized during cleanup");
-      //   return;
-      // }
-
-      // const sessionInfo = client.getSessionInfo();
-      // if (!sessionInfo) {
-      //   console.warn("No active session during cleanup");
-      //   return;
-      // }
-
-      // if (stream) {
-      //   try {
-      //     await stream.stopAudio();
-      //   } catch (audioError) {
-      //     console.warn("Error stopping audio:", audioError);
-      //   }
-      // }
-
-      // setAudioStarted(false);
-      // setIsInitializingAudio(false);
-      // setIsMuted(false);
-      // setIsRecording(false);
-      // setStream(null);
-      // setRecordingClient(null);
-      // await client.leave();
-      // navigate("/");
       window.location.reload();
     });
 
