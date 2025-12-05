@@ -25,6 +25,7 @@ import useAuth from "@/hooks/useAuth";
 import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { DesktopOnlyModal } from "@/components/DesktopOnlyModal";
+import { AudioDeviceSelector } from "@/components/AudioDeviceSelector";
 
 const TOPICS = [
   {
@@ -634,9 +635,22 @@ const Room = () => {
     number | null
   >(null);
   const [meetingStartTime, setMeetingStartTime] = useState<number | null>(null);
+  const [rejoining, setRejoining] = useState(false);
+  const [pariticpantAudioMute, setParticipantAudioMute] = useState(false);
 
   const roomId = meetingName || "R-8492";
   const roomPassword = roomPasscode || "SECURE-2847";
+
+  const isHostRef = useRef(isHost);
+  const isRecordingRef = useRef(isRecording);
+
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
+
+  useEffect(() => {
+    isRecordingRef.current = isRecording;
+  }, [isRecording]);
 
   useEffect(() => {
     if (!isDesktop) {
@@ -746,21 +760,23 @@ const Room = () => {
         const currentUser = client.getCurrentUserInfo();
         setCurrentZoomUserId(currentUser.userId);
 
+        const sessionInfo = client.getSessionInfo();
+        const sessionID = sessionInfo.sessionId;
+
         socket.emit("join-meeting", {
           meetingName,
           userName,
           isHost: checkHost,
           timestamp: Date.now(),
+          sessionID: sessionID,
+          jwtToken: signature,
         });
 
         socket.emit("request-topic-state", { meetingName });
 
         setIsJoining(false);
         setMeetingStatus("active");
-        console.log(
-          "✅ Successfully joined meeting as",
-          checkHost ? "Host" : "Participant"
-        );
+        setRejoining(false);
         toast({
           title: "Successfully joined meeting",
           variant: "default",
@@ -776,7 +792,7 @@ const Room = () => {
       }
     };
 
-    if (meetingName && userName) {
+    if (meetingName && userName && meetingStatus === "checking") {
       joinMeeting();
     }
 
@@ -785,7 +801,7 @@ const Room = () => {
         leaveMeetingCleanup();
       }
     };
-  }, [meetingName, userName]);
+  }, [meetingName, userName, meetingStatus]);
 
   const startAudioOnFirstInteraction = async () => {
     if (audioStarted || !stream || isInitializingAudio) return;
@@ -939,6 +955,55 @@ const Room = () => {
       }
     );
 
+    socket.on("host-disconnected-rejoin-required", async (data) => {
+      toast({
+        title: "Host disconnected",
+        description: "Reconnecting to meeting...",
+      });
+      setRejoining(true);
+      const client = clientRef.current;
+
+      if (!client) {
+        console.warn("Client not initialized during cleanup");
+        return;
+      }
+
+      const sessionInfo = client.getSessionInfo();
+      if (!sessionInfo) {
+        console.warn("No active session during cleanup");
+        return;
+      }
+
+      if (stream) {
+        try {
+          await stream.stopAudio();
+        } catch (audioError) {
+          console.warn("Error stopping audio:", audioError);
+        }
+      }
+
+      setAudioStarted(false);
+      setIsInitializingAudio(false);
+      setIsMuted(false);
+      setIsRecording(false);
+      setStream(null);
+      setRecordingClient(null);
+      await client.leave();
+      setMeetingStatus("checking");
+    });
+
+    socket.on("audio-unmute-during-recording", () => {
+      if (isHostRef.current) {
+        setParticipantAudioMute(false);
+      }
+    });
+
+    socket.on("audio-mute-during-recording", async (data) => {
+      if (isHostRef.current) {
+        setParticipantAudioMute(true);
+      }
+    });
+
     return () => {
       socket.off("recording-started");
       socket.off("recording-stopped");
@@ -947,6 +1012,8 @@ const Room = () => {
       socket.off("topic-changed");
       socket.off("subtopic-selected");
       socket.off("current-topic-state");
+      socket.off("host-disconnected-rejoin-required");
+      socket.off("audio-mute-during-recording");
     };
   }, [meetingName]);
 
@@ -1057,11 +1124,48 @@ const Room = () => {
   };
 
   const toggleMute = async () => {
+    if (!stream) {
+      toast({
+        title: "Audio not available",
+        description: "Please enable audio first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!audioStarted) {
+      toast({
+        title: "Audio not started",
+        description: "Please enable audio first.",
+        variant: "destructive",
+      });
+      setShowEnableAudioDialog(true);
+      return;
+    }
     try {
       if (stream) {
         if (isMuted) {
+          socket.emit("audio-unmute-during-recording", {
+            meetingName,
+            stoppedBy: userName,
+            timestamp: new Date().toISOString(),
+          });
           await stream.unmuteAudio();
         } else {
+          socket.emit("audio-mute-during-recording", {
+            meetingName,
+            stoppedBy: userName,
+            timestamp: new Date().toISOString(),
+          });
+          if (isRecording) {
+            await api.post(
+              `${baseURL}/v1/zoom/recording/participant-left`,
+              {
+                meetingName,
+              },
+              { withCredentials: true }
+            );
+          }
           await stream.muteAudio();
         }
         setIsMuted(!isMuted);
@@ -1076,6 +1180,24 @@ const Room = () => {
       toast({
         title: "Permission denied",
         description: "Only the host can control recording.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isMuted) {
+      toast({
+        title: "Permission denied",
+        description: "Your audio is mute unmute it first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (pariticpantAudioMute) {
+      toast({
+        title: "Permission denied",
+        description: "One of the participant's audio is mute",
         variant: "destructive",
       });
       return;
@@ -1259,7 +1381,7 @@ const Room = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <p className="text-xl font-semibold text-gray-800">
-            Joining meeting...
+            {rejoining ? "Rejoining Meeting..." : "Joining meeting..."}
           </p>
         </div>
       </div>
@@ -1322,6 +1444,21 @@ const Room = () => {
               </span>
             </button>
           )}
+        </div>
+        <div className="ml-auto flex items-center gap-2 md:gap-4">
+          <AudioDeviceSelector
+            type="microphone"
+            stream={stream}
+            disabled={isRecordingRef.current ? true : false}
+          />
+        </div>
+
+        <div className="ml-auto flex items-center gap-2 md:gap-4">
+          <AudioDeviceSelector
+            type="speaker"
+            stream={stream}
+            disabled={isRecordingRef.current ? true : false}
+          />
         </div>
       </div>
 

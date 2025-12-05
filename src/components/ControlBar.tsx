@@ -36,6 +36,7 @@ export const ControlBar = ({
             "h-9 px-4 md:px-5 rounded-lg border-border bg-background hover:bg-muted hover:border-foreground/20 hover:text-black [&_svg]:hover:text-black transition-all",
             isMuted ? "text-muted-foreground" : "text-foreground"
           )}
+          disabled={isRecording}
         >
           {isMuted ? (
             <MicOff
