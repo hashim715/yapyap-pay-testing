@@ -1004,6 +1004,66 @@ const Room = () => {
       }
     });
 
+    socket.on("disconnect", async (reason) => {
+      console.log("🔌 Socket disconnected:", reason);
+
+      if (meetingStatus === "active") {
+        toast({
+          title: "Connection lost",
+          description: "You've been disconnected from the meeting.",
+          variant: "destructive",
+        });
+
+        try {
+          const client = clientRef.current;
+
+          if (client) {
+            const sessionInfo = client.getSessionInfo();
+
+            if (sessionInfo && stream) {
+              try {
+                await stream.stopAudio();
+              } catch (audioError) {
+                console.warn(
+                  "Error stopping audio during disconnect:",
+                  audioError
+                );
+              }
+            }
+
+            try {
+              await client.leave();
+            } catch (leaveError) {
+              console.warn("Error leaving during disconnect:", leaveError);
+            }
+          }
+
+          setAudioStarted(false);
+          setIsInitializingAudio(false);
+          setIsMuted(false);
+          setIsRecording(false);
+          setStream(null);
+          setRecordingClient(null);
+          setParticipants([]);
+          setParticipantCount(0);
+          setMeetingStatus("idle");
+          setIsJoining(false);
+
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+        } catch (error) {
+          console.error("Error during disconnect cleanup:", error);
+          navigate("/");
+        }
+      }
+    });
+
     return () => {
       socket.off("recording-started");
       socket.off("recording-stopped");
@@ -1014,6 +1074,7 @@ const Room = () => {
       socket.off("current-topic-state");
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
+      socket.off("disconnect");
     };
   }, [meetingName]);
 
