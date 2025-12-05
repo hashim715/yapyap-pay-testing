@@ -7,7 +7,7 @@ interface BaseUrlState {
 const initialState: BaseUrlState = {
   url:
     import.meta.env.VITE_NODE_ENV === "production"
-      ? "https://backend.coursex.us"
+      ? "https://backend.californiacore.co"
       : "http://localhost:5001",
 };
 
