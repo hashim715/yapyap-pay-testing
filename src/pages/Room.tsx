@@ -26,6 +26,7 @@ import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { DesktopOnlyModal } from "@/components/DesktopOnlyModal";
 import { AudioDeviceSelector } from "@/components/AudioDeviceSelector";
+import useOnline from "../hooks/useOnline";
 
 const TOPICS = [
   {
@@ -643,6 +644,7 @@ const Room = () => {
 
   const isHostRef = useRef(isHost);
   const isRecordingRef = useRef(isRecording);
+  const { isOnline, hasInternet } = useOnline();
 
   useEffect(() => {
     isHostRef.current = isHost;
@@ -1493,6 +1495,42 @@ const Room = () => {
       </div>
     );
   }
+
+  if (!isOnline)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="text-center">
+          <h1 className="mb-4 text-4xl font-bold">503</h1>
+          <p className="mb-4 text-xl text-muted-foreground">
+            Oops! No internet connection
+          </p>
+          <button
+            className="text-primary underline hover:text-primary/90"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+
+  if (!hasInternet)
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted">
+        <div className="text-center">
+          <h1 className="mb-4 text-4xl font-bold">503</h1>
+          <p className="mb-4 text-xl text-muted-foreground">
+            Oops! No internet connection
+          </p>
+          <button
+            className="text-primary underline hover:text-primary/90"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

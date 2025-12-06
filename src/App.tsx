@@ -43,6 +43,7 @@ import ProtectVerificationRoute from "./pages/ProtectVerificationRoutes";
 import ProtectOnboardingSubmittedRoute from "./pages/ProtectOnBoardingSubmitted";
 import GoogleOAuthCallback from "./pages/GoogleOAuthCallback";
 import JoinPage from "./pages/JoinPage";
+import ProtectedRoomRoute from "./pages/ProtectedRoomRoute";
 
 const queryClient = new QueryClient();
 
@@ -107,13 +108,16 @@ const App = () => (
                 <Route path="/profile" element={<Profile />} />
               </Route>
               <Route
-                path="/room/:meetingName/:roomPasscode"
-                element={<Room />}
-              />
-              <Route
                 path="/join/:meetingName/:roomPasscode"
                 element={<JoinPage />}
               ></Route>
+            </Route>
+
+            <Route element={<ProtectedRoomRoute />}>
+              <Route
+                path="/room/:meetingName/:roomPasscode"
+                element={<Room />}
+              />
             </Route>
 
             <Route path="*" element={<NotFound />} />
