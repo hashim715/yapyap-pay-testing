@@ -1,6 +1,7 @@
 import { Mic, MicOff, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AudioDeviceSelector } from "@/components/AudioDeviceSelector";
 
 interface ControlBarProps {
   isHost: boolean;
@@ -10,6 +11,7 @@ interface ControlBarProps {
   onToggleMute: () => void;
   onLeave: () => void;
   className?: string;
+  stream: any;
 }
 
 export const ControlBar = ({
@@ -20,6 +22,7 @@ export const ControlBar = ({
   onToggleMute,
   onLeave,
   className,
+  stream,
 }: ControlBarProps) => {
   return (
     <div
@@ -28,6 +31,18 @@ export const ControlBar = ({
         className
       )}
     >
+      <div className="flex items-center gap-2">
+        <AudioDeviceSelector
+          type="microphone"
+          stream={stream}
+          disabled={isRecording ? true : false}
+        />
+        <AudioDeviceSelector
+          type="speaker"
+          stream={stream}
+          disabled={isRecording ? true : false}
+        />
+      </div>
       <div className="flex items-center gap-2 md:gap-3 flex-wrap justify-center">
         <Button
           variant="outline"

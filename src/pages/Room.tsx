@@ -25,7 +25,6 @@ import useAuth from "@/hooks/useAuth";
 import { DialogDescription, DialogTitle } from "@radix-ui/react-dialog";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { DesktopOnlyModal } from "@/components/DesktopOnlyModal";
-import { AudioDeviceSelector } from "@/components/AudioDeviceSelector";
 import useOnline from "../hooks/useOnline";
 
 const TOPICS = [
@@ -1576,21 +1575,6 @@ const Room = () => {
             </button>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-2 md:gap-4">
-          <AudioDeviceSelector
-            type="microphone"
-            stream={stream}
-            disabled={isRecordingRef.current ? true : false}
-          />
-        </div>
-
-        <div className="ml-auto flex items-center gap-2 md:gap-4">
-          <AudioDeviceSelector
-            type="speaker"
-            stream={stream}
-            disabled={isRecordingRef.current ? true : false}
-          />
-        </div>
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
@@ -1651,6 +1635,7 @@ const Room = () => {
         onToggleRecording={toggleRecording}
         onToggleMute={toggleMute}
         onLeave={() => setShowLeaveDialog(true)}
+        stream={stream}
       />
 
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
