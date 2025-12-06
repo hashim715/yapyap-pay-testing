@@ -1025,16 +1025,10 @@ const Room = () => {
 
       const handleUserRemoved = async (users: any) => {
         const leftUser = users[0];
-
-        // ✅ Clear from ref
-        manuallyRemovedUsersRef.current.delete(leftUser.userId);
-        console.log(`✅ User ${leftUser.userId} confirmed removed by Zoom SDK`);
-
         if (isRecording && !isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
           setIsRecording(false);
         }
-
         if (isRecording && isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
 
@@ -1053,23 +1047,38 @@ const Room = () => {
       const updateParticipants = () => {
         const users = client.getAllUser();
 
-        const filteredUsers = users.filter(
-          (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
-        );
+        if (manuallyRemovedUsersRef.current.size > 0) {
+          const filteredUsers = users.filter(
+            (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
+          );
 
-        setParticipantCount(filteredUsers.length);
+          setParticipantCount(filteredUsers.length);
+          const mappedParticipants = filteredUsers.map(
+            (user: any, index: number) => ({
+              id: user.userId,
+              name: user.displayName || `Participant ${index + 1}`,
+              zoomUserId: user.userId,
+              type: user.userId === currentZoomUserId ? "user" : "speaker",
+              isCurrentUser: user.userId === currentZoomUserId,
+              isSpeaking: false,
+            })
+          );
 
-        const mappedParticipants = filteredUsers.map(
-          (user: any, index: number) => ({
+          setParticipants(mappedParticipants);
+        } else {
+          setParticipantCount(users.length);
+
+          const mappedParticipants = users.map((user: any, index: number) => ({
             id: user.userId,
             name: user.displayName || `Participant ${index + 1}`,
             zoomUserId: user.userId,
             type: user.userId === currentZoomUserId ? "user" : "speaker",
             isCurrentUser: user.userId === currentZoomUserId,
             isSpeaking: false,
-          })
-        );
-        setParticipants(mappedParticipants);
+          }));
+
+          setParticipants(mappedParticipants);
+        }
       };
 
       client.on("active-speaker", handleActiveSpeaker);
@@ -1156,17 +1165,17 @@ const Room = () => {
     socket.on("refresh-participants-required", async (data) => {
       try {
         if (data.zoomUserId) {
-          console.log(`🚨 Marking user ${data.zoomUserId} as manually removed`);
-
           manuallyRemovedUsersRef.current.add(data.zoomUserId);
 
           setParticipants((prev) => {
             const filtered = prev.filter(
               (p) => p.zoomUserId !== data.zoomUserId
             );
+            console.log(
+              `✅ Filtered out participant. Before: ${prev.length}, After: ${filtered.length}`
+            );
             return filtered;
           });
-
           setParticipantCount((prev) => Math.max(0, prev - 1));
 
           setTimeout(() => {
@@ -1174,8 +1183,9 @@ const Room = () => {
             console.log(
               `⏱️ Cleared manual removal flag for user ${data.zoomUserId}`
             );
-          }, 120000);
+          }, 180000);
         }
+        console.log("✅ Participants refreshed");
       } catch (error) {
         console.error("Error refreshing participants:", error);
       }
