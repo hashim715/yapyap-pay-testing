@@ -590,8 +590,15 @@ const BACKEND_URL =
     : import.meta.env.VITE_DEV_BACKEND_URL;
 
 const socket = io(BACKEND_URL, {
-  transports: ["websocket"],
+  transports: ["websocket", "polling"], // ✅ Add polling as fallback
   withCredentials: true,
+  // ✅ Add reconnection configuration
+  reconnection: true,
+  reconnectionAttempts: 10, // Try 10 times
+  reconnectionDelay: 1000, // Wait 1s before first retry
+  reconnectionDelayMax: 5000, // Max 5s between retries
+  timeout: 20000, // Connection timeout
+  autoConnect: true,
 });
 
 const Room = () => {
@@ -719,35 +726,35 @@ const Room = () => {
           return;
         }
 
-        const participantCheck = await new Promise<{
-          success: boolean;
-          participantCount: number;
-          maxParticipants: number;
-          canJoin: boolean;
-        }>((resolve) => {
-          socket.emit("check-can-join", { meetingName }, (response: any) => {
-            resolve(response);
-          });
-        });
+        // const participantCheck = await new Promise<{
+        //   success: boolean;
+        //   participantCount: number;
+        //   maxParticipants: number;
+        //   canJoin: boolean;
+        // }>((resolve) => {
+        //   socket.emit("check-can-join", { meetingName }, (response: any) => {
+        //     resolve(response);
+        //   });
+        // });
 
-        if (!participantCheck.success || !participantCheck.canJoin) {
-          toast({
-            title: "Meeting is full",
-            description: `This meeting already has ${participantCheck.participantCount} participants. Maximum ${participantCheck.maxParticipants} participants allowed.`,
-            variant: "destructive",
-          });
-          console.log(`❌ Cannot join: Meeting is full`);
+        // if (!participantCheck.success || !participantCheck.canJoin) {
+        //   toast({
+        //     title: "Meeting is full",
+        //     description: `This meeting already has ${participantCheck.participantCount} participants. Maximum ${participantCheck.maxParticipants} participants allowed.`,
+        //     variant: "destructive",
+        //   });
+        //   console.log(`❌ Cannot join: Meeting is full`);
 
-          setTimeout(() => {
-            navigate("/");
-          }, 2000);
+        //   setTimeout(() => {
+        //     navigate("/");
+        //   }, 2000);
 
-          return;
-        }
+        //   return;
+        // }
 
-        console.log(
-          `✅ Meeting has space: ${participantCheck.participantCount}/${participantCheck.maxParticipants} participants`
-        );
+        // console.log(
+        //   `✅ Meeting has space: ${participantCheck.participantCount}/${participantCheck.maxParticipants} participants`
+        // );
 
         const response = await api.post(
           `${baseURL}/v1/zoomSDKAuth/signature/`,
