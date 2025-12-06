@@ -750,6 +750,7 @@ const Room = () => {
             setParticipants([]);
             setParticipantCount(0);
             setIsJoining(false);
+            socket.disconnect();
 
             if (timerRef.current) {
               clearInterval(timerRef.current);
