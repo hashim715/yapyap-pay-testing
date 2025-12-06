@@ -956,7 +956,6 @@ const Room = () => {
       };
 
       const handleUserRemoved = async (users: any) => {
-        console.log("👋 User removed event fired:", users);
         const leftUser = users[0];
 
         if (isRecording && !isHost) {
@@ -1123,46 +1122,46 @@ const Room = () => {
       }
     });
 
-    socket.on("disconnect", async (reason) => {
-      console.log("🔌 Socket disconnected:", reason);
+    // socket.on("disconnect", async (reason) => {
+    //   console.log("🔌 Socket disconnected:", reason);
 
-      if (meetingStatus === "active") {
-        toast({
-          title: "Connection lost",
-          description: "Reconnecting...",
-        });
+    //   if (meetingStatus === "active") {
+    //     toast({
+    //       title: "Connection lost",
+    //       description: "Reconnecting...",
+    //     });
 
-        try {
-          const client = clientRef.current;
+    //     try {
+    //       const client = clientRef.current;
 
-          if (client) {
-            const sessionInfo = client.getSessionInfo();
+    //       if (client) {
+    //         const sessionInfo = client.getSessionInfo();
 
-            if (sessionInfo && stream) {
-              try {
-                await stream.stopAudio();
-              } catch (audioError) {
-                console.warn("Error stopping audio:", audioError);
-              }
-            }
+    //         if (sessionInfo && stream) {
+    //           try {
+    //             await stream.stopAudio();
+    //           } catch (audioError) {
+    //             console.warn("Error stopping audio:", audioError);
+    //           }
+    //         }
 
-            try {
-              await client.leave();
-              console.log("✅ Successfully left Zoom session before reload");
-            } catch (leaveError) {
-              console.warn("Error leaving Zoom session:", leaveError);
-            }
-          }
+    //         try {
+    //           await client.leave();
+    //           console.log("✅ Successfully left Zoom session before reload");
+    //         } catch (leaveError) {
+    //           console.warn("Error leaving Zoom session:", leaveError);
+    //         }
+    //       }
 
-          await new Promise((resolve) => setTimeout(resolve, 300));
+    //       await new Promise((resolve) => setTimeout(resolve, 300));
 
-          window.location.reload();
-        } catch (error) {
-          console.error("Error during disconnect cleanup:", error);
-          window.location.reload();
-        }
-      }
-    });
+    //       window.location.reload();
+    //     } catch (error) {
+    //       console.error("Error during disconnect cleanup:", error);
+    //       window.location.reload();
+    //     }
+    //   }
+    // });
 
     return () => {
       socket.off("recording-started");
@@ -1174,7 +1173,7 @@ const Room = () => {
       socket.off("current-topic-state");
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
-      socket.off("disconnect");
+      // socket.off("disconnect");
     };
   }, [meetingName]);
 
