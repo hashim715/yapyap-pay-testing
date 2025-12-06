@@ -1134,7 +1134,6 @@ const Room = () => {
             );
             return filtered;
           });
-
           setParticipantCount((prev) => Math.max(0, prev - 1));
         }
         console.log("✅ Participants refreshed");
