@@ -704,26 +704,6 @@ const Room = () => {
             const client = clientRef.current;
 
             if (client) {
-              try {
-                const users = client.getAllUser();
-                const mappedParticipants = users.map(
-                  (user: any, index: number) => ({
-                    id: user.userId,
-                    name: user.displayName || `Participant ${index + 1}`,
-                    zoomUserId: user.userId,
-                    type:
-                      user.userId === currentZoomUserId ? "user" : "speaker",
-                    isCurrentUser: user.userId === currentZoomUserId,
-                    isSpeaking: false,
-                  })
-                );
-                setParticipants(mappedParticipants);
-                setParticipantCount(users.length);
-                console.log("🔄 Final participants refresh before cleanup");
-              } catch (error) {
-                console.error("Error refreshing participants:", error);
-              }
-
               const sessionInfo = client.getSessionInfo();
               if (sessionInfo && stream) {
                 try {
