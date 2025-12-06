@@ -700,52 +700,46 @@ const Room = () => {
         console.log("max attempts reached buddy");
 
         if (meetingStatus === "active") {
-          try {
-            const client = clientRef.current;
-
-            if (client) {
-              const sessionInfo = client.getSessionInfo();
-              if (sessionInfo && stream) {
-                try {
-                  await stream.stopAudio();
-                  console.log("✅ Audio stopped");
-                } catch (audioError) {
-                  console.warn("Error stopping audio:", audioError);
-                }
-              }
-
-              try {
-                await client.leave();
-                console.log("✅ Left Zoom session");
-              } catch (leaveError) {
-                console.warn("Error leaving Zoom session:", leaveError);
-              }
-            }
-
-            setAudioStarted(false);
-            setIsInitializingAudio(false);
-            setIsMuted(false);
-            setIsRecording(false);
-            setStream(null);
-            setRecordingClient(null);
-            setParticipants([]);
-            setParticipantCount(0);
-            setIsJoining(false);
-            socket.disconnect();
-
-            if (timerRef.current) {
-              clearInterval(timerRef.current);
-              timerRef.current = null;
-            }
-
-            console.log("✅ Complete cleanup done");
-          } catch (error) {
-            console.error("Error during cleanup:", error);
-          }
-
-          setTimeout(() => {
-            navigate("/");
-          }, 2000);
+          navigate("/");
+          // try {
+          //   const client = clientRef.current;
+          //   if (client) {
+          //     const sessionInfo = client.getSessionInfo();
+          //     if (sessionInfo && stream) {
+          //       try {
+          //         await stream.stopAudio();
+          //         console.log("✅ Audio stopped");
+          //       } catch (audioError) {
+          //         console.warn("Error stopping audio:", audioError);
+          //       }
+          //     }
+          //     try {
+          //       await client.leave();
+          //       console.log("✅ Left Zoom session");
+          //     } catch (leaveError) {
+          //       console.warn("Error leaving Zoom session:", leaveError);
+          //     }
+          //   }
+          //   setAudioStarted(false);
+          //   setIsInitializingAudio(false);
+          //   setIsMuted(false);
+          //   setIsRecording(false);
+          //   setStream(null);
+          //   setRecordingClient(null);
+          //   setParticipants([]);
+          //   setParticipantCount(0);
+          //   setIsJoining(false);
+          //   if (timerRef.current) {
+          //     clearInterval(timerRef.current);
+          //     timerRef.current = null;
+          //   }
+          //   console.log("✅ Complete cleanup done");
+          // } catch (error) {
+          //   console.error("Error during cleanup:", error);
+          // }
+          // setTimeout(() => {
+          //   navigate("/");
+          // }, 2000);
         }
       }
     });
@@ -1006,7 +1000,6 @@ const Room = () => {
       const handleUserRemoved = async (users: any) => {
         const leftUser = users[0];
 
-        // ✅ Clear from ref
         manuallyRemovedUsersRef.current.delete(leftUser.userId);
         console.log(`✅ User ${leftUser.userId} confirmed removed by Zoom SDK`);
 
@@ -1176,13 +1169,6 @@ const Room = () => {
           );
 
           setParticipants(mappedParticipants);
-
-          setTimeout(() => {
-            manuallyRemovedUsersRef.current.delete(data.zoomUserId);
-            console.log(
-              `⏱️ Cleared manual removal flag for user ${data.zoomUserId}`
-            );
-          }, 120000);
         }
         console.log("✅ Participants refreshed");
       } catch (error) {
