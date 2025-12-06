@@ -1270,6 +1270,14 @@ const Room = () => {
   };
 
   const toggleRecording = async () => {
+    if (participantCount <= 1) {
+      toast({
+        title: "Permission denied",
+        description: "Two participants are required to start meeting.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!isHost) {
       toast({
         title: "Permission denied",
@@ -1337,11 +1345,6 @@ const Room = () => {
             stoppedBy: userName,
             timestamp: new Date().toISOString(),
           });
-
-          toast({
-            title: "Recording stopped",
-            description: "Individual audio files will be available.",
-          });
         } else {
           if (selectedSubtopicIndex !== null) {
             await recordingClient.startCloudRecording();
@@ -1360,11 +1363,6 @@ const Room = () => {
               meetingName,
               startedBy: userName,
               timestamp: new Date().toISOString(),
-            });
-
-            toast({
-              title: "Recording started",
-              description: "Each user's audio will be recorded separately.",
             });
           } else {
             toast({
@@ -1418,14 +1416,6 @@ const Room = () => {
       topicIndex: currentTopicIndex,
       subtopicIndex: index === -1 ? null : index,
       selectedBy: userName,
-    });
-
-    toast({
-      title: index === -1 ? "Subtopic cleared" : "Subtopic selected",
-      description:
-        index === -1
-          ? "Ready to select a new subtopic."
-          : `Subtopic ${index + 1} is now active.`,
     });
   };
 
