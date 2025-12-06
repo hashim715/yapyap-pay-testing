@@ -674,21 +674,21 @@ const Room = () => {
         socket.emit("request-meeting-time", { meetingName });
         socket.emit("request-topic-state", { meetingName });
 
-        // const client = clientRef.current;
-        // if (client) {
-        //   const users = client.getAllUser();
-        //   const mappedParticipants = users.map((user: any, index: number) => ({
-        //     id: user.userId,
-        //     name: user.displayName || `Participant ${index + 1}`,
-        //     zoomUserId: user.userId,
-        //     type: user.userId === currentZoomUserId ? "user" : "speaker",
-        //     isCurrentUser: user.userId === currentZoomUserId,
-        //     isSpeaking: false,
-        //   }));
-        //   setParticipants(mappedParticipants);
-        //   setParticipantCount(users.length);
-        //   console.log("🔄 Participants refreshed after reconnection");
-        // }
+        const client = clientRef.current;
+        if (client) {
+          const users = client.getAllUser();
+          const mappedParticipants = users.map((user: any, index: number) => ({
+            id: user.userId,
+            name: user.displayName || `Participant ${index + 1}`,
+            zoomUserId: user.userId,
+            type: user.userId === currentZoomUserId ? "user" : "speaker",
+            isCurrentUser: user.userId === currentZoomUserId,
+            isSpeaking: false,
+          }));
+          setParticipants(mappedParticipants);
+          setParticipantCount(users.length);
+          console.log("🔄 Participants refreshed after reconnection");
+        }
       }
     });
 
@@ -1121,6 +1121,24 @@ const Room = () => {
         setCompletedTopics(data.completedTopics);
       }
     );
+
+    socket.on("refresh-participants", async (data) => {
+      const client = clientRef.current;
+      if (client) {
+        const users = client.getAllUser();
+        const mappedParticipants = users.map((user: any, index: number) => ({
+          id: user.userId,
+          name: user.displayName || `Participant ${index + 1}`,
+          zoomUserId: user.userId,
+          type: user.userId === currentZoomUserId ? "user" : "speaker",
+          isCurrentUser: user.userId === currentZoomUserId,
+          isSpeaking: false,
+        }));
+        setParticipants(mappedParticipants);
+        setParticipantCount(users.length);
+        console.log("🔄 Participants refreshed after reconnection");
+      }
+    });
 
     socket.on("refresh-participants-required", async (data) => {
       try {
