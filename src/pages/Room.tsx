@@ -1267,7 +1267,7 @@ const Room = () => {
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
       socket.off("refresh-participants-required");
-      socket.off("refresh-participants");
+      socket.off("participant-reconnected");
     };
   }, [meetingName]);
 
