@@ -1124,7 +1124,44 @@ const Room = () => {
     });
 
     socket.on("disconnect", async (reason) => {
-      window.location.reload();
+      console.log("🔌 Socket disconnected:", reason);
+
+      if (meetingStatus === "active") {
+        toast({
+          title: "Connection lost",
+          description: "Reconnecting...",
+        });
+
+        try {
+          const client = clientRef.current;
+
+          if (client) {
+            const sessionInfo = client.getSessionInfo();
+
+            if (sessionInfo && stream) {
+              try {
+                await stream.stopAudio();
+              } catch (audioError) {
+                console.warn("Error stopping audio:", audioError);
+              }
+            }
+
+            try {
+              await client.leave();
+              console.log("✅ Successfully left Zoom session before reload");
+            } catch (leaveError) {
+              console.warn("Error leaving Zoom session:", leaveError);
+            }
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          window.location.reload();
+        } catch (error) {
+          console.error("Error during disconnect cleanup:", error);
+          window.location.reload();
+        }
+      }
     });
 
     return () => {
