@@ -749,8 +749,8 @@ const Room = () => {
             setRecordingClient(null);
             setParticipants([]);
             setParticipantCount(0);
-            setMeetingStatus("idle");
             setIsJoining(false);
+            socket.disconnect();
 
             if (timerRef.current) {
               clearInterval(timerRef.current);
