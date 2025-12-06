@@ -653,6 +653,125 @@ const Room = () => {
   const { isOnline, hasInternet } = useOnline();
 
   useEffect(() => {
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected:", socket.id);
+      reconnectAttempts = 0;
+
+      if (meetingStatus === "active" && meetingName) {
+        console.log("🔄 Reconnected - rejoining meeting...");
+
+        socket.emit("join-meeting", {
+          meetingName,
+          userName,
+          isHost,
+          timestamp: Date.now(),
+          sessionID: clientRef.current?.getSessionInfo()?.sessionId,
+          jwtToken: "",
+          isReconnect: true,
+        });
+
+        socket.emit("request-meeting-time", { meetingName });
+        socket.emit("request-topic-state", { meetingName });
+
+        toast({
+          title: "Reconnected",
+          description: "Successfully reconnected to the meeting.",
+        });
+      }
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("❌ Socket connection error:", error);
+      reconnectAttempts++;
+
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        toast({
+          title: "Connection failed",
+          description:
+            "Unable to connect to the server. Please check your internet connection.",
+          variant: "destructive",
+        });
+      }
+    });
+
+    socket.on("reconnect_attempt", (attemptNumber) => {
+      console.log(`🔄 Reconnection attempt ${attemptNumber}...`);
+
+      if (meetingStatus === "active") {
+        toast({
+          title: "Reconnecting...",
+          description: `Attempt ${attemptNumber} of ${maxReconnectAttempts}`,
+        });
+      }
+    });
+
+    socket.on("reconnect", (attemptNumber) => {
+      console.log(`✅ Reconnected after ${attemptNumber} attempts`);
+      reconnectAttempts = 0;
+    });
+
+    // socket.on("reconnect_failed", () => {
+    //   console.error("❌ Failed to reconnect after all attempts");
+
+    //   if (meetingStatus === "active") {
+    //     toast({
+    //       title: "Connection lost",
+    //       description: "Unable to reconnect. Returning to home...",
+    //       variant: "destructive",
+    //     });
+
+    //     setTimeout(async () => {
+    //       try {
+    //         await leaveMeetingCleanup();
+    //       } catch (error) {
+    //         console.error("Error during cleanup:", error);
+    //       }
+    //       navigate("/");
+    //     }, 2000);
+    //   }
+    // });
+
+    // socket.on("disconnect", (reason) => {
+    //   console.log("🔌 Socket disconnected:", reason);
+
+    //   if (meetingStatus === "active") {
+    //     // Different handling based on disconnect reason
+    //     if (reason === "io server disconnect") {
+    //       // Server initiated disconnect - likely kicked out
+    //       toast({
+    //         title: "Disconnected",
+    //         description: "You were disconnected from the meeting.",
+    //         variant: "destructive",
+    //       });
+
+    //       setTimeout(async () => {
+    //         await leaveMeetingCleanup();
+    //         navigate("/");
+    //       }, 2000);
+    //     } else if (reason === "transport close" || reason === "ping timeout") {
+    //       // Network issue - will auto-reconnect
+    //       toast({
+    //         title: "Connection lost",
+    //         description: "Attempting to reconnect...",
+    //       });
+    //     }
+    //   }
+    // });
+
+    return () => {
+      socket.off("connect");
+      socket.off("connect_error");
+      socket.off("reconnect_attempt");
+      socket.off("reconnect");
+      // socket.off("reconnect_failed");
+      // socket.off("disconnect");
+    };
+  }, [meetingStatus, meetingName, userName, isHost]);
+
+  useEffect(() => {
     isHostRef.current = isHost;
   }, [isHost]);
 
@@ -1130,50 +1249,9 @@ const Room = () => {
     });
 
     // socket.on("disconnect", async (reason) => {
-    //   console.log("🔌 Socket disconnected:", reason);
-
-    //   if (meetingStatus === "active") {
-    //     toast({
-    //       title: "Connection lost",
-    //       description: "Reconnecting...",
-    //     });
-
-    //     try {
-    //       const client = clientRef.current;
-
-    //       if (client) {
-    //         const sessionInfo = client.getSessionInfo();
-
-    //         if (sessionInfo && stream) {
-    //           try {
-    //             await stream.stopAudio();
-    //           } catch (audioError) {
-    //             console.warn("Error stopping audio:", audioError);
-    //           }
-    //         }
-
-    //         try {
-    //           await client.leave();
-    //           console.log("✅ Successfully left Zoom session before reload");
-    //         } catch (leaveError) {
-    //           console.warn("Error leaving Zoom session:", leaveError);
-    //         }
-    //       }
-
-    //       await new Promise((resolve) => setTimeout(resolve, 300));
-
-    //       window.location.reload();
-    //     } catch (error) {
-    //       console.error("Error during disconnect cleanup:", error);
-    //       window.location.reload();
-    //     }
-    //   }
+    //   setIsRecording(false);
+    //   window.location.reload();
     // });
-
-    socket.on("disconnect", async (reason) => {
-      setIsRecording(false);
-      window.location.reload();
-    });
 
     return () => {
       socket.off("recording-started");
@@ -1185,7 +1263,7 @@ const Room = () => {
       socket.off("current-topic-state");
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
-      socket.off("disconnect");
+      // socket.off("disconnect");
     };
   }, [meetingName]);
 
