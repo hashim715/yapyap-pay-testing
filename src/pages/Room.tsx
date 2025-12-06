@@ -1121,6 +1121,32 @@ const Room = () => {
       }
     );
 
+    socket.on("refresh-participants-required", async () => {
+      try {
+        const client = clientRef.current;
+
+        if (!client) {
+          console.warn("Client not initialized during cleanup");
+          return;
+        }
+
+        const users = client.getAllUser();
+        const mappedParticipants = users.map((user: any, index: number) => ({
+          id: user.userId,
+          name: user.displayName || `Participant ${index + 1}`,
+          zoomUserId: user.userId,
+          type: user.userId === currentZoomUserId ? "user" : "speaker",
+          isCurrentUser: user.userId === currentZoomUserId,
+          isSpeaking: false,
+        }));
+        setParticipants(mappedParticipants);
+        setParticipantCount(users.length);
+        console.log("🔄 Final participants refresh before cleanup");
+      } catch (error) {
+        console.error("Error refreshing participants:", error);
+      }
+    });
+
     socket.on("host-disconnected-rejoin-required", async (data) => {
       if (data.userName !== userName) {
         toast({
@@ -1133,23 +1159,6 @@ const Room = () => {
         if (!client) {
           console.warn("Client not initialized during cleanup");
           return;
-        }
-
-        try {
-          const users = client.getAllUser();
-          const mappedParticipants = users.map((user: any, index: number) => ({
-            id: user.userId,
-            name: user.displayName || `Participant ${index + 1}`,
-            zoomUserId: user.userId,
-            type: user.userId === currentZoomUserId ? "user" : "speaker",
-            isCurrentUser: user.userId === currentZoomUserId,
-            isSpeaking: false,
-          }));
-          setParticipants(mappedParticipants);
-          setParticipantCount(users.length);
-          console.log("🔄 Final participants refresh before cleanup");
-        } catch (error) {
-          console.error("Error refreshing participants:", error);
         }
 
         const sessionInfo = client.getSessionInfo();
@@ -1199,6 +1208,7 @@ const Room = () => {
       socket.off("current-topic-state");
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
+      socket.off("refresh-participants-required");
     };
   }, [meetingName]);
 
