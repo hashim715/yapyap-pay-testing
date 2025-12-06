@@ -1058,6 +1058,7 @@ const Room = () => {
           );
 
           setParticipantCount(filteredUsers.length);
+
           const mappedParticipants = filteredUsers.map(
             (user: any, index: number) => ({
               id: user.userId,
@@ -1169,19 +1170,32 @@ const Room = () => {
 
     socket.on("refresh-participants-required", async (data) => {
       try {
+        const client = clientRef.current;
         if (data.zoomUserId) {
+          console.log(data.zoomUserId);
+
           manuallyRemovedUsersRef.current.add(data.zoomUserId);
 
-          setParticipants((prev) => {
-            const filtered = prev.filter(
-              (p) => p.zoomUserId !== data.zoomUserId
-            );
-            console.log(
-              `✅ Filtered out participant. Before: ${prev.length}, After: ${filtered.length}`
-            );
-            return filtered;
-          });
-          setParticipantCount((prev) => Math.max(0, prev - 1));
+          const users = client.getAllUser();
+
+          const filteredUsers = users.filter(
+            (user: any) => user.userId !== data.zoomUserId
+          );
+
+          setParticipantCount(filteredUsers.length);
+
+          const mappedParticipants = filteredUsers.map(
+            (user: any, index: number) => ({
+              id: user.userId,
+              name: user.displayName || `Participant ${index + 1}`,
+              zoomUserId: user.userId,
+              type: user.userId === currentZoomUserId ? "user" : "speaker",
+              isCurrentUser: user.userId === currentZoomUserId,
+              isSpeaking: false,
+            })
+          );
+
+          setParticipants(mappedParticipants);
 
           setTimeout(() => {
             manuallyRemovedUsersRef.current.delete(data.zoomUserId);
