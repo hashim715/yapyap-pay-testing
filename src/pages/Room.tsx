@@ -1170,6 +1170,9 @@ const Room = () => {
     //   }
     // });
 
+    socket.on("disconnect", async (reason) => {
+      setIsRecording(false);
+    });
     return () => {
       socket.off("recording-started");
       socket.off("recording-stopped");
@@ -1180,7 +1183,7 @@ const Room = () => {
       socket.off("current-topic-state");
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
-      // socket.off("disconnect");
+      socket.off("disconnect");
     };
   }, [meetingName]);
 
