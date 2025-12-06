@@ -674,21 +674,21 @@ const Room = () => {
         socket.emit("request-meeting-time", { meetingName });
         socket.emit("request-topic-state", { meetingName });
 
-        const client = clientRef.current;
-        if (client) {
-          const users = client.getAllUser();
-          const mappedParticipants = users.map((user: any, index: number) => ({
-            id: user.userId,
-            name: user.displayName || `Participant ${index + 1}`,
-            zoomUserId: user.userId,
-            type: user.userId === currentZoomUserId ? "user" : "speaker",
-            isCurrentUser: user.userId === currentZoomUserId,
-            isSpeaking: false,
-          }));
-          setParticipants(mappedParticipants);
-          setParticipantCount(users.length);
-          console.log("🔄 Participants refreshed after reconnection");
-        }
+        // const client = clientRef.current;
+        // if (client) {
+        //   const users = client.getAllUser();
+        //   const mappedParticipants = users.map((user: any, index: number) => ({
+        //     id: user.userId,
+        //     name: user.displayName || `Participant ${index + 1}`,
+        //     zoomUserId: user.userId,
+        //     type: user.userId === currentZoomUserId ? "user" : "speaker",
+        //     isCurrentUser: user.userId === currentZoomUserId,
+        //     isSpeaking: false,
+        //   }));
+        //   setParticipants(mappedParticipants);
+        //   setParticipantCount(users.length);
+        //   console.log("🔄 Participants refreshed after reconnection");
+        // }
       }
     });
 
@@ -703,25 +703,25 @@ const Room = () => {
             const client = clientRef.current;
 
             if (client) {
-              try {
-                const users = client.getAllUser();
-                const mappedParticipants = users.map(
-                  (user: any, index: number) => ({
-                    id: user.userId,
-                    name: user.displayName || `Participant ${index + 1}`,
-                    zoomUserId: user.userId,
-                    type:
-                      user.userId === currentZoomUserId ? "user" : "speaker",
-                    isCurrentUser: user.userId === currentZoomUserId,
-                    isSpeaking: false,
-                  })
-                );
-                setParticipants(mappedParticipants);
-                setParticipantCount(users.length);
-                console.log("🔄 Final participants refresh before cleanup");
-              } catch (error) {
-                console.error("Error refreshing participants:", error);
-              }
+              // try {
+              //   const users = client.getAllUser();
+              //   const mappedParticipants = users.map(
+              //     (user: any, index: number) => ({
+              //       id: user.userId,
+              //       name: user.displayName || `Participant ${index + 1}`,
+              //       zoomUserId: user.userId,
+              //       type:
+              //         user.userId === currentZoomUserId ? "user" : "speaker",
+              //       isCurrentUser: user.userId === currentZoomUserId,
+              //       isSpeaking: false,
+              //     })
+              //   );
+              //   setParticipants(mappedParticipants);
+              //   setParticipantCount(users.length);
+              //   console.log("🔄 Final participants refresh before cleanup");
+              // } catch (error) {
+              //   console.error("Error refreshing participants:", error);
+              // }
 
               const sessionInfo = client.getSessionInfo();
               if (sessionInfo && stream) {
@@ -1124,11 +1124,6 @@ const Room = () => {
 
     socket.on("refresh-participants-required", async (data) => {
       try {
-        console.log(
-          "🔄 Refresh participants required, removing:",
-          data.zoomUserId
-        );
-
         if (data.zoomUserId) {
           setParticipants((prev) => {
             const filtered = prev.filter(
@@ -1141,30 +1136,7 @@ const Room = () => {
           });
 
           setParticipantCount((prev) => Math.max(0, prev - 1));
-        } else {
-          console.log("⚠️ No zoomUserId provided, refreshing from Zoom SDK");
-
-          const client = clientRef.current;
-
-          if (!client) {
-            console.warn("Client not initialized");
-            return;
-          }
-
-          const users = client.getAllUser();
-          const mappedParticipants = users.map((user: any, index: number) => ({
-            id: user.userId,
-            name: user.displayName || `Participant ${index + 1}`,
-            zoomUserId: user.userId,
-            type: user.userId === currentZoomUserId ? "user" : "speaker",
-            isCurrentUser: user.userId === currentZoomUserId,
-            isSpeaking: false,
-          }));
-
-          setParticipants(mappedParticipants);
-          setParticipantCount(users.length);
         }
-
         console.log("✅ Participants refreshed");
       } catch (error) {
         console.error("Error refreshing participants:", error);
