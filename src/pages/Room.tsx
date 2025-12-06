@@ -590,14 +590,13 @@ const BACKEND_URL =
     : import.meta.env.VITE_DEV_BACKEND_URL;
 
 const socket = io(BACKEND_URL, {
-  transports: ["websocket", "polling"], // ✅ Add polling as fallback
+  transports: ["websocket", "polling"],
   withCredentials: true,
-  // ✅ Add reconnection configuration
   reconnection: true,
-  reconnectionAttempts: 10, // Try 10 times
-  reconnectionDelay: 1000, // Wait 1s before first retry
-  reconnectionDelayMax: 5000, // Max 5s between retries
-  timeout: 20000, // Connection timeout
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
   autoConnect: true,
 });
 
@@ -654,11 +653,10 @@ const Room = () => {
 
   useEffect(() => {
     let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
+    const maxReconnectAttempts = 10;
 
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
-      reconnectAttempts = 0;
 
       if (meetingStatus === "active" && meetingName) {
         console.log("🔄 Reconnected - rejoining meeting...");
@@ -676,36 +674,34 @@ const Room = () => {
         socket.emit("request-meeting-time", { meetingName });
         socket.emit("request-topic-state", { meetingName });
 
-        toast({
-          title: "Reconnected",
-          description: "Successfully reconnected to the meeting.",
-        });
+        const client = clientRef.current;
+        if (client) {
+          const users = client.getAllUser();
+          const mappedParticipants = users.map((user: any, index: number) => ({
+            id: user.userId,
+            name: user.displayName || `Participant ${index + 1}`,
+            zoomUserId: user.userId,
+            type: user.userId === currentZoomUserId ? "user" : "speaker",
+            isCurrentUser: user.userId === currentZoomUserId,
+            isSpeaking: false,
+          }));
+          setParticipants(mappedParticipants);
+          setParticipantCount(users.length);
+          console.log("🔄 Participants refreshed after reconnection");
+        }
       }
     });
 
     socket.on("connect_error", (error) => {
-      console.error("❌ Socket connection error:", error);
       reconnectAttempts++;
 
       if (reconnectAttempts >= maxReconnectAttempts) {
-        toast({
-          title: "Connection failed",
-          description:
-            "Unable to connect to the server. Please check your internet connection.",
-          variant: "destructive",
-        });
+        console.log("max attempts reached buddy");
       }
     });
 
     socket.on("reconnect_attempt", (attemptNumber) => {
       console.log(`🔄 Reconnection attempt ${attemptNumber}...`);
-
-      if (meetingStatus === "active") {
-        toast({
-          title: "Reconnecting...",
-          description: `Attempt ${attemptNumber} of ${maxReconnectAttempts}`,
-        });
-      }
     });
 
     socket.on("reconnect", (attemptNumber) => {
@@ -713,63 +709,89 @@ const Room = () => {
       reconnectAttempts = 0;
     });
 
-    // socket.on("reconnect_failed", () => {
-    //   console.error("❌ Failed to reconnect after all attempts");
+    socket.on("reconnect_error", (error) => {
+      console.error("❌ Reconnection error:", error);
+    });
 
-    //   if (meetingStatus === "active") {
-    //     toast({
-    //       title: "Connection lost",
-    //       description: "Unable to reconnect. Returning to home...",
-    //       variant: "destructive",
-    //     });
+    socket.on("reconnect_failed", async () => {
+      if (meetingStatus === "active") {
+        try {
+          const client = clientRef.current;
 
-    //     setTimeout(async () => {
-    //       try {
-    //         await leaveMeetingCleanup();
-    //       } catch (error) {
-    //         console.error("Error during cleanup:", error);
-    //       }
-    //       navigate("/");
-    //     }, 2000);
-    //   }
-    // });
+          if (client) {
+            try {
+              const users = client.getAllUser();
+              const mappedParticipants = users.map(
+                (user: any, index: number) => ({
+                  id: user.userId,
+                  name: user.displayName || `Participant ${index + 1}`,
+                  zoomUserId: user.userId,
+                  type: user.userId === currentZoomUserId ? "user" : "speaker",
+                  isCurrentUser: user.userId === currentZoomUserId,
+                  isSpeaking: false,
+                })
+              );
+              setParticipants(mappedParticipants);
+              setParticipantCount(users.length);
+              console.log("🔄 Final participants refresh before cleanup");
+            } catch (error) {
+              console.error("Error refreshing participants:", error);
+            }
 
-    // socket.on("disconnect", (reason) => {
-    //   console.log("🔌 Socket disconnected:", reason);
+            const sessionInfo = client.getSessionInfo();
+            if (sessionInfo && stream) {
+              try {
+                await stream.stopAudio();
+                console.log("✅ Audio stopped");
+              } catch (audioError) {
+                console.warn("Error stopping audio:", audioError);
+              }
+            }
 
-    //   if (meetingStatus === "active") {
-    //     // Different handling based on disconnect reason
-    //     if (reason === "io server disconnect") {
-    //       // Server initiated disconnect - likely kicked out
-    //       toast({
-    //         title: "Disconnected",
-    //         description: "You were disconnected from the meeting.",
-    //         variant: "destructive",
-    //       });
+            try {
+              await client.leave();
+              console.log("✅ Left Zoom session");
+            } catch (leaveError) {
+              console.warn("Error leaving Zoom session:", leaveError);
+            }
+          }
 
-    //       setTimeout(async () => {
-    //         await leaveMeetingCleanup();
-    //         navigate("/");
-    //       }, 2000);
-    //     } else if (reason === "transport close" || reason === "ping timeout") {
-    //       // Network issue - will auto-reconnect
-    //       toast({
-    //         title: "Connection lost",
-    //         description: "Attempting to reconnect...",
-    //       });
-    //     }
-    //   }
-    // });
+          setAudioStarted(false);
+          setIsInitializingAudio(false);
+          setIsMuted(false);
+          setIsRecording(false);
+          setStream(null);
+          setRecordingClient(null);
+          setParticipants([]);
+          setParticipantCount(0);
+          setMeetingStatus("idle");
+          setIsJoining(false);
+
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+
+          console.log("✅ Complete cleanup done");
+        } catch (error) {
+          console.error("Error during cleanup:", error);
+        }
+
+        setTimeout(() => {
+          navigate("/");
+        }, 2000);
+      }
+    });
 
     return () => {
       socket.off("connect");
       socket.off("connect_error");
       socket.off("reconnect_attempt");
       socket.off("reconnect");
-      // socket.off("reconnect_failed");
-      // socket.off("disconnect");
+      socket.off("reconnect_error");
+      socket.off("reconnect_failed");
     };
-  }, [meetingStatus, meetingName, userName, isHost]);
+  }, [meetingStatus, meetingName, userName]);
 
   useEffect(() => {
     isHostRef.current = isHost;
@@ -995,76 +1017,6 @@ const Room = () => {
     }
   }, [stream, meetingStatus, audioStarted]);
 
-  // useEffect(() => {
-  //   const client = clientRef.current;
-
-  //   if (!isJoining && meetingStatus === "active") {
-  //     const handleActiveSpeaker = (payload: any) => {
-  //       payload.forEach((element: any) => {
-  //         const activeSpeakerId = element.userId;
-  //         setParticipants((prev) =>
-  //           prev.map((p) => ({
-  //             ...p,
-  //             isSpeaking: p.zoomUserId === activeSpeakerId,
-  //           }))
-  //         );
-  //       });
-  //     };
-
-  //     const handleUserRemoved = async (users: any) => {
-  //       const leftUser = users[0];
-  //       if (isRecording && !isHost) {
-  //         console.log("🛑 Stopping recording due to participant leaving");
-  //         setIsRecording(false);
-  //       }
-  //       if (isRecording && isHost) {
-  //         console.log("🛑 Stopping recording due to participant leaving");
-
-  //         await api.post(
-  //           `${baseURL}/v1/zoom/recording/participant-left`,
-  //           {
-  //             meetingName,
-  //           },
-  //           { withCredentials: true }
-  //         );
-
-  //         stopRecordingDueToLeave(leftUser?.displayName);
-  //       }
-  //       updateParticipants();
-  //     };
-
-  //     const updateParticipants = () => {
-  //       const users = client.getAllUser();
-  //       setParticipantCount(users.length);
-
-  //       const mappedParticipants = users.map((user: any, index: number) => ({
-  //         id: user.userId,
-  //         name: user.displayName || `Participant ${index + 1}`,
-  //         zoomUserId: user.userId,
-  //         type: user.userId === currentZoomUserId ? "user" : "speaker",
-  //         isCurrentUser: user.userId === currentZoomUserId,
-  //         isSpeaking: false,
-  //       }));
-
-  //       setParticipants(mappedParticipants);
-  //     };
-
-  //     client.on("active-speaker", handleActiveSpeaker);
-  //     client.on("user-added", updateParticipants);
-  //     client.on("user-removed", handleUserRemoved);
-  //     client.on("user-updated", updateParticipants);
-
-  //     updateParticipants();
-
-  //     return () => {
-  //       client.off("active-speaker", handleActiveSpeaker);
-  //       client.off("user-added", updateParticipants);
-  //       client.off("user-removed", handleUserRemoved);
-  //       client.off("user-updated", updateParticipants);
-  //     };
-  //   }
-  // }, [isJoining, isRecording, meetingStatus, currentZoomUserId]);
-
   useEffect(() => {
     const client = clientRef.current;
 
@@ -1083,12 +1035,10 @@ const Room = () => {
 
       const handleUserRemoved = async (users: any) => {
         const leftUser = users[0];
-
         if (isRecording && !isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
           setIsRecording(false);
         }
-
         if (isRecording && isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
 
@@ -1102,7 +1052,6 @@ const Room = () => {
 
           stopRecordingDueToLeave(leftUser?.displayName);
         }
-
         updateParticipants();
       };
 
@@ -1122,20 +1071,10 @@ const Room = () => {
         setParticipants(mappedParticipants);
       };
 
-      const handleConnectionChange = (payload: any) => {
-        updateParticipants();
-      };
-
-      const handlePeerVideoStateChange = (payload: any) => {
-        updateParticipants();
-      };
-
       client.on("active-speaker", handleActiveSpeaker);
       client.on("user-added", updateParticipants);
       client.on("user-removed", handleUserRemoved);
       client.on("user-updated", updateParticipants);
-      client.on("connection-change", handleConnectionChange);
-      client.on("peer-video-state-change", handlePeerVideoStateChange);
 
       updateParticipants();
 
@@ -1144,11 +1083,9 @@ const Room = () => {
         client.off("user-added", updateParticipants);
         client.off("user-removed", handleUserRemoved);
         client.off("user-updated", updateParticipants);
-        client.off("connection-change", handleConnectionChange);
-        client.off("peer-video-state-change", handlePeerVideoStateChange);
       };
     }
-  }, [isJoining, isRecording, meetingStatus, currentZoomUserId, isHost]);
+  }, [isJoining, isRecording, meetingStatus, currentZoomUserId]);
 
   useEffect(() => {
     socket.on("meeting-time-sync", (data: { startTime: number }) => {
@@ -1248,11 +1185,6 @@ const Room = () => {
       }
     });
 
-    // socket.on("disconnect", async (reason) => {
-    //   setIsRecording(false);
-    //   window.location.reload();
-    // });
-
     return () => {
       socket.off("recording-started");
       socket.off("recording-stopped");
@@ -1263,7 +1195,6 @@ const Room = () => {
       socket.off("current-topic-state");
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
-      // socket.off("disconnect");
     };
   }, [meetingName]);
 
