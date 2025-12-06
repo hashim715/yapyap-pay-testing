@@ -692,11 +692,80 @@ const Room = () => {
       }
     });
 
-    socket.on("connect_error", (error) => {
+    socket.on("connect_error", async (error) => {
       reconnectAttempts++;
 
       if (reconnectAttempts >= maxReconnectAttempts) {
         console.log("max attempts reached buddy");
+
+        if (meetingStatus === "active") {
+          try {
+            const client = clientRef.current;
+
+            if (client) {
+              try {
+                const users = client.getAllUser();
+                const mappedParticipants = users.map(
+                  (user: any, index: number) => ({
+                    id: user.userId,
+                    name: user.displayName || `Participant ${index + 1}`,
+                    zoomUserId: user.userId,
+                    type:
+                      user.userId === currentZoomUserId ? "user" : "speaker",
+                    isCurrentUser: user.userId === currentZoomUserId,
+                    isSpeaking: false,
+                  })
+                );
+                setParticipants(mappedParticipants);
+                setParticipantCount(users.length);
+                console.log("🔄 Final participants refresh before cleanup");
+              } catch (error) {
+                console.error("Error refreshing participants:", error);
+              }
+
+              const sessionInfo = client.getSessionInfo();
+              if (sessionInfo && stream) {
+                try {
+                  await stream.stopAudio();
+                  console.log("✅ Audio stopped");
+                } catch (audioError) {
+                  console.warn("Error stopping audio:", audioError);
+                }
+              }
+
+              try {
+                await client.leave();
+                console.log("✅ Left Zoom session");
+              } catch (leaveError) {
+                console.warn("Error leaving Zoom session:", leaveError);
+              }
+            }
+
+            setAudioStarted(false);
+            setIsInitializingAudio(false);
+            setIsMuted(false);
+            setIsRecording(false);
+            setStream(null);
+            setRecordingClient(null);
+            setParticipants([]);
+            setParticipantCount(0);
+            setMeetingStatus("idle");
+            setIsJoining(false);
+
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+
+            console.log("✅ Complete cleanup done");
+          } catch (error) {
+            console.error("Error during cleanup:", error);
+          }
+
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+        }
       }
     });
 
@@ -709,87 +778,11 @@ const Room = () => {
       reconnectAttempts = 0;
     });
 
-    socket.on("reconnect_error", (error) => {
-      console.error("❌ Reconnection error:", error);
-    });
-
-    socket.on("reconnect_failed", async () => {
-      if (meetingStatus === "active") {
-        try {
-          const client = clientRef.current;
-
-          if (client) {
-            try {
-              const users = client.getAllUser();
-              const mappedParticipants = users.map(
-                (user: any, index: number) => ({
-                  id: user.userId,
-                  name: user.displayName || `Participant ${index + 1}`,
-                  zoomUserId: user.userId,
-                  type: user.userId === currentZoomUserId ? "user" : "speaker",
-                  isCurrentUser: user.userId === currentZoomUserId,
-                  isSpeaking: false,
-                })
-              );
-              setParticipants(mappedParticipants);
-              setParticipantCount(users.length);
-              console.log("🔄 Final participants refresh before cleanup");
-            } catch (error) {
-              console.error("Error refreshing participants:", error);
-            }
-
-            const sessionInfo = client.getSessionInfo();
-            if (sessionInfo && stream) {
-              try {
-                await stream.stopAudio();
-                console.log("✅ Audio stopped");
-              } catch (audioError) {
-                console.warn("Error stopping audio:", audioError);
-              }
-            }
-
-            try {
-              await client.leave();
-              console.log("✅ Left Zoom session");
-            } catch (leaveError) {
-              console.warn("Error leaving Zoom session:", leaveError);
-            }
-          }
-
-          setAudioStarted(false);
-          setIsInitializingAudio(false);
-          setIsMuted(false);
-          setIsRecording(false);
-          setStream(null);
-          setRecordingClient(null);
-          setParticipants([]);
-          setParticipantCount(0);
-          setMeetingStatus("idle");
-          setIsJoining(false);
-
-          if (timerRef.current) {
-            clearInterval(timerRef.current);
-            timerRef.current = null;
-          }
-
-          console.log("✅ Complete cleanup done");
-        } catch (error) {
-          console.error("Error during cleanup:", error);
-        }
-
-        setTimeout(() => {
-          navigate("/");
-        }, 2000);
-      }
-    });
-
     return () => {
       socket.off("connect");
       socket.off("connect_error");
       socket.off("reconnect_attempt");
       socket.off("reconnect");
-      socket.off("reconnect_error");
-      socket.off("reconnect_failed");
     };
   }, [meetingStatus, meetingName, userName]);
 
@@ -884,7 +877,6 @@ const Room = () => {
         //     description: `This meeting already has ${participantCheck.participantCount} participants. Maximum ${participantCheck.maxParticipants} participants allowed.`,
         //     variant: "destructive",
         //   });
-        //   console.log(`❌ Cannot join: Meeting is full`);
 
         //   setTimeout(() => {
         //     navigate("/");
@@ -892,10 +884,6 @@ const Room = () => {
 
         //   return;
         // }
-
-        // console.log(
-        //   `✅ Meeting has space: ${participantCheck.participantCount}/${participantCheck.maxParticipants} participants`
-        // );
 
         const response = await api.post(
           `${baseURL}/v1/zoomSDKAuth/signature/`,
