@@ -1198,7 +1198,7 @@ const Room = () => {
     );
 
     socket.on("host-disconnected-rejoin-required", async (data) => {
-      if (!isHost) {
+      if (data.userName !== userName) {
         toast({
           title: "Host disconnected",
           description: "Reconnecting to meeting...",
