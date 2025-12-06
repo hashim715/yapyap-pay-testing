@@ -678,17 +678,42 @@ const Room = () => {
         const client = clientRef.current;
         if (client) {
           const users = client.getAllUser();
-          const mappedParticipants = users.map((user: any, index: number) => ({
-            id: user.userId,
-            name: user.displayName || `Participant ${index + 1}`,
-            zoomUserId: user.userId,
-            type: user.userId === currentZoomUserId ? "user" : "speaker",
-            isCurrentUser: user.userId === currentZoomUserId,
-            isSpeaking: false,
-          }));
-          setParticipants(mappedParticipants);
-          setParticipantCount(users.length);
-          console.log("🔄 Participants refreshed after reconnection");
+
+          if (manuallyRemovedUsersRef.current.size > 0) {
+            const filteredUsers = users.filter(
+              (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
+            );
+
+            setParticipantCount(filteredUsers.length);
+
+            const mappedParticipants = filteredUsers.map(
+              (user: any, index: number) => ({
+                id: user.userId,
+                name: user.displayName || `Participant ${index + 1}`,
+                zoomUserId: user.userId,
+                type: user.userId === currentZoomUserId ? "user" : "speaker",
+                isCurrentUser: user.userId === currentZoomUserId,
+                isSpeaking: false,
+              })
+            );
+
+            setParticipants(mappedParticipants);
+          } else {
+            setParticipantCount(users.length);
+
+            const mappedParticipants = users.map(
+              (user: any, index: number) => ({
+                id: user.userId,
+                name: user.displayName || `Participant ${index + 1}`,
+                zoomUserId: user.userId,
+                type: user.userId === currentZoomUserId ? "user" : "speaker",
+                isCurrentUser: user.userId === currentZoomUserId,
+                isSpeaking: false,
+              })
+            );
+
+            setParticipants(mappedParticipants);
+          }
         }
       }
     });
@@ -700,46 +725,45 @@ const Room = () => {
         console.log("max attempts reached buddy");
 
         if (meetingStatus === "active") {
-          navigate("/");
-          // try {
-          //   const client = clientRef.current;
-          //   if (client) {
-          //     const sessionInfo = client.getSessionInfo();
-          //     if (sessionInfo && stream) {
-          //       try {
-          //         await stream.stopAudio();
-          //         console.log("✅ Audio stopped");
-          //       } catch (audioError) {
-          //         console.warn("Error stopping audio:", audioError);
-          //       }
-          //     }
-          //     try {
-          //       await client.leave();
-          //       console.log("✅ Left Zoom session");
-          //     } catch (leaveError) {
-          //       console.warn("Error leaving Zoom session:", leaveError);
-          //     }
-          //   }
-          //   setAudioStarted(false);
-          //   setIsInitializingAudio(false);
-          //   setIsMuted(false);
-          //   setIsRecording(false);
-          //   setStream(null);
-          //   setRecordingClient(null);
-          //   setParticipants([]);
-          //   setParticipantCount(0);
-          //   setIsJoining(false);
-          //   if (timerRef.current) {
-          //     clearInterval(timerRef.current);
-          //     timerRef.current = null;
-          //   }
-          //   console.log("✅ Complete cleanup done");
-          // } catch (error) {
-          //   console.error("Error during cleanup:", error);
-          // }
-          // setTimeout(() => {
-          //   navigate("/");
-          // }, 2000);
+          try {
+            const client = clientRef.current;
+            if (client) {
+              const sessionInfo = client.getSessionInfo();
+              if (sessionInfo && stream) {
+                try {
+                  await stream.stopAudio();
+                  console.log("✅ Audio stopped");
+                } catch (audioError) {
+                  console.warn("Error stopping audio:", audioError);
+                }
+              }
+              try {
+                await client.leave();
+                console.log("✅ Left Zoom session");
+              } catch (leaveError) {
+                console.warn("Error leaving Zoom session:", leaveError);
+              }
+            }
+            setAudioStarted(false);
+            setIsInitializingAudio(false);
+            setIsMuted(false);
+            setIsRecording(false);
+            setStream(null);
+            setRecordingClient(null);
+            setParticipants([]);
+            setParticipantCount(0);
+            setIsJoining(false);
+            if (timerRef.current) {
+              clearInterval(timerRef.current);
+              timerRef.current = null;
+            }
+            console.log("✅ Complete cleanup done");
+          } catch (error) {
+            console.error("Error during cleanup:", error);
+          }
+          setTimeout(() => {
+            navigate("/");
+          }, 300);
         }
       }
     });
@@ -1127,17 +1151,40 @@ const Room = () => {
       const client = clientRef.current;
       if (client) {
         const users = client.getAllUser();
-        const mappedParticipants = users.map((user: any, index: number) => ({
-          id: user.userId,
-          name: user.displayName || `Participant ${index + 1}`,
-          zoomUserId: user.userId,
-          type: user.userId === currentZoomUserId ? "user" : "speaker",
-          isCurrentUser: user.userId === currentZoomUserId,
-          isSpeaking: false,
-        }));
-        setParticipants(mappedParticipants);
-        setParticipantCount(users.length);
-        console.log("🔄 Participants refreshed after reconnection");
+
+        if (manuallyRemovedUsersRef.current.size > 0) {
+          const filteredUsers = users.filter(
+            (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
+          );
+
+          setParticipantCount(filteredUsers.length);
+
+          const mappedParticipants = filteredUsers.map(
+            (user: any, index: number) => ({
+              id: user.userId,
+              name: user.displayName || `Participant ${index + 1}`,
+              zoomUserId: user.userId,
+              type: user.userId === currentZoomUserId ? "user" : "speaker",
+              isCurrentUser: user.userId === currentZoomUserId,
+              isSpeaking: false,
+            })
+          );
+
+          setParticipants(mappedParticipants);
+        } else {
+          setParticipantCount(users.length);
+
+          const mappedParticipants = users.map((user: any, index: number) => ({
+            id: user.userId,
+            name: user.displayName || `Participant ${index + 1}`,
+            zoomUserId: user.userId,
+            type: user.userId === currentZoomUserId ? "user" : "speaker",
+            isCurrentUser: user.userId === currentZoomUserId,
+            isSpeaking: false,
+          }));
+
+          setParticipants(mappedParticipants);
+        }
       }
     });
 
