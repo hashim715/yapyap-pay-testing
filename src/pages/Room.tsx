@@ -723,26 +723,6 @@ const Room = () => {
                 console.error("Error refreshing participants:", error);
               }
 
-              if (isRecording && isHost) {
-                await recordingClient.stopCloudRecording();
-                setIsRecording(false);
-                console.log(
-                  "🛑 Recording stopped because disconncting network"
-                );
-                await api.post(
-                  `${baseURL}/v1/zoom/recording/participant-left`,
-                  {
-                    meetingName,
-                  },
-                  { withCredentials: true }
-                );
-                socket.emit("recording-stopped", {
-                  meetingName,
-                  stoppedBy: userName,
-                  timestamp: new Date().toISOString(),
-                });
-              }
-
               const sessionInfo = client.getSessionInfo();
               if (sessionInfo && stream) {
                 try {
