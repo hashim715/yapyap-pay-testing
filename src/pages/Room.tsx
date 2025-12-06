@@ -1172,7 +1172,9 @@ const Room = () => {
 
     socket.on("disconnect", async (reason) => {
       setIsRecording(false);
+      window.location.reload();
     });
+
     return () => {
       socket.off("recording-started");
       socket.off("recording-stopped");
