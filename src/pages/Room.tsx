@@ -719,6 +719,36 @@ const Room = () => {
           return;
         }
 
+        const participantCheck = await new Promise<{
+          success: boolean;
+          participantCount: number;
+          maxParticipants: number;
+          canJoin: boolean;
+        }>((resolve) => {
+          socket.emit("check-can-join", { meetingName }, (response: any) => {
+            resolve(response);
+          });
+        });
+
+        if (!participantCheck.success || !participantCheck.canJoin) {
+          toast({
+            title: "Meeting is full",
+            description: `This meeting already has ${participantCheck.participantCount} participants. Maximum ${participantCheck.maxParticipants} participants allowed.`,
+            variant: "destructive",
+          });
+          console.log(`❌ Cannot join: Meeting is full`);
+
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+
+          return;
+        }
+
+        console.log(
+          `✅ Meeting has space: ${participantCheck.participantCount}/${participantCheck.maxParticipants} participants`
+        );
+
         const response = await api.post(
           `${baseURL}/v1/zoomSDKAuth/signature/`,
           {
