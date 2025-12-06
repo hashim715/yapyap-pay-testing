@@ -930,6 +930,7 @@ const Room = () => {
           sessionID: sessionID,
           jwtToken: signature,
           zoomUserId: currentUser.userId,
+          isReconnect: false,
         });
 
         socket.emit("request-topic-state", { meetingName });
