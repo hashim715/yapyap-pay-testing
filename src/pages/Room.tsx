@@ -1148,44 +1148,44 @@ const Room = () => {
       }
     });
 
-    socket.on("host-disconnected-rejoin-required", async (data) => {
-      if (data.userName !== userName) {
-        toast({
-          title: "Host disconnected",
-          description: "Reconnecting to meeting...",
-        });
-        setRejoining(true);
-        const client = clientRef.current;
+    // socket.on("host-disconnected-rejoin-required", async (data) => {
+    //   if (data.userName !== userName) {
+    //     toast({
+    //       title: "Host disconnected",
+    //       description: "Reconnecting to meeting...",
+    //     });
+    //     setRejoining(true);
+    //     const client = clientRef.current;
 
-        if (!client) {
-          console.warn("Client not initialized during cleanup");
-          return;
-        }
+    //     if (!client) {
+    //       console.warn("Client not initialized during cleanup");
+    //       return;
+    //     }
 
-        const sessionInfo = client.getSessionInfo();
-        if (!sessionInfo) {
-          console.warn("No active session during cleanup");
-          return;
-        }
+    //     const sessionInfo = client.getSessionInfo();
+    //     if (!sessionInfo) {
+    //       console.warn("No active session during cleanup");
+    //       return;
+    //     }
 
-        if (stream) {
-          try {
-            await stream.stopAudio();
-          } catch (audioError) {
-            console.warn("Error stopping audio:", audioError);
-          }
-        }
+    //     if (stream) {
+    //       try {
+    //         await stream.stopAudio();
+    //       } catch (audioError) {
+    //         console.warn("Error stopping audio:", audioError);
+    //       }
+    //     }
 
-        setAudioStarted(false);
-        setIsInitializingAudio(false);
-        setIsMuted(false);
-        setIsRecording(false);
-        setStream(null);
-        setRecordingClient(null);
-        await client.leave();
-        setMeetingStatus("checking");
-      }
-    });
+    //     setAudioStarted(false);
+    //     setIsInitializingAudio(false);
+    //     setIsMuted(false);
+    //     setIsRecording(false);
+    //     setStream(null);
+    //     setRecordingClient(null);
+    //     await client.leave();
+    //     setMeetingStatus("checking");
+    //   }
+    // });
 
     socket.on("audio-unmute-during-recording", () => {
       if (isHostRef.current) {
