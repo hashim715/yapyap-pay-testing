@@ -1025,6 +1025,11 @@ const Room = () => {
 
       const handleUserRemoved = async (users: any) => {
         const leftUser = users[0];
+
+        // ✅ Clear from ref
+        manuallyRemovedUsersRef.current.delete(leftUser.userId);
+        console.log(`✅ User ${leftUser.userId} confirmed removed by Zoom SDK`);
+
         if (isRecording && !isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
           setIsRecording(false);
