@@ -1007,8 +1007,8 @@ const Room = () => {
         const leftUser = users[0];
 
         // ✅ Clear from ref
-        manuallyRemovedUsersRef.current.delete(leftUser.userId);
-        console.log(`✅ User ${leftUser.userId} confirmed removed by Zoom SDK`);
+        // manuallyRemovedUsersRef.current.delete(leftUser.userId);
+        // console.log(`✅ User ${leftUser.userId} confirmed removed by Zoom SDK`);
 
         if (isRecording && !isHost) {
           console.log("🛑 Stopping recording due to participant leaving");
@@ -1032,7 +1032,7 @@ const Room = () => {
       const updateParticipants = () => {
         const users = client.getAllUser();
 
-        if (manuallyRemovedUsersRef.current.size > 0) {
+        if (false) {
           const filteredUsers = users.filter(
             (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
           );
@@ -1148,47 +1148,47 @@ const Room = () => {
       }
     });
 
-    socket.on("refresh-participants-required", async (data) => {
-      try {
-        const client = clientRef.current;
-        if (data.zoomUserId) {
-          console.log(data.zoomUserId);
+    // socket.on("refresh-participants-required", async (data) => {
+    //   try {
+    //     const client = clientRef.current;
+    //     if (data.zoomUserId) {
+    //       console.log(data.zoomUserId);
 
-          manuallyRemovedUsersRef.current.add(data.zoomUserId);
+    //       manuallyRemovedUsersRef.current.add(data.zoomUserId);
 
-          const users = client.getAllUser();
+    //       const users = client.getAllUser();
 
-          const filteredUsers = users.filter(
-            (user: any) => user.userId !== data.zoomUserId
-          );
+    //       const filteredUsers = users.filter(
+    //         (user: any) => user.userId !== data.zoomUserId
+    //       );
 
-          setParticipantCount(filteredUsers.length);
+    //       setParticipantCount(filteredUsers.length);
 
-          const mappedParticipants = filteredUsers.map(
-            (user: any, index: number) => ({
-              id: user.userId,
-              name: user.displayName || `Participant ${index + 1}`,
-              zoomUserId: user.userId,
-              type: user.userId === currentZoomUserId ? "user" : "speaker",
-              isCurrentUser: user.userId === currentZoomUserId,
-              isSpeaking: false,
-            })
-          );
+    //       const mappedParticipants = filteredUsers.map(
+    //         (user: any, index: number) => ({
+    //           id: user.userId,
+    //           name: user.displayName || `Participant ${index + 1}`,
+    //           zoomUserId: user.userId,
+    //           type: user.userId === currentZoomUserId ? "user" : "speaker",
+    //           isCurrentUser: user.userId === currentZoomUserId,
+    //           isSpeaking: false,
+    //         })
+    //       );
 
-          setParticipants(mappedParticipants);
+    //       setParticipants(mappedParticipants);
 
-          setTimeout(() => {
-            manuallyRemovedUsersRef.current.delete(data.zoomUserId);
-            console.log(
-              `⏱️ Cleared manual removal flag for user ${data.zoomUserId}`
-            );
-          }, 180000);
-        }
-        console.log("✅ Participants refreshed");
-      } catch (error) {
-        console.error("Error refreshing participants:", error);
-      }
-    });
+    //       setTimeout(() => {
+    //         manuallyRemovedUsersRef.current.delete(data.zoomUserId);
+    //         console.log(
+    //           `⏱️ Cleared manual removal flag for user ${data.zoomUserId}`
+    //         );
+    //       }, 180000);
+    //     }
+    //     console.log("✅ Participants refreshed");
+    //   } catch (error) {
+    //     console.error("Error refreshing participants:", error);
+    //   }
+    // });
 
     socket.on("host-disconnected-rejoin-required", async (data) => {
       if (data.userName !== userName) {
@@ -1251,7 +1251,8 @@ const Room = () => {
       socket.off("current-topic-state");
       socket.off("host-disconnected-rejoin-required");
       socket.off("audio-mute-during-recording");
-      socket.off("refresh-participants-required");
+      // socket.off("refresh-participants-required");
+      socket.off("refresh-participants");
     };
   }, [meetingName]);
 
