@@ -936,6 +936,7 @@ const Room = () => {
           timestamp: Date.now(),
           sessionID: sessionID,
           jwtToken: signature,
+          zoomUserId: currentUser.userId,
         });
 
         socket.emit("request-topic-state", { meetingName });
@@ -1121,27 +1122,50 @@ const Room = () => {
       }
     );
 
-    socket.on("refresh-participants-required", async () => {
+    socket.on("refresh-participants-required", async (data) => {
       try {
-        const client = clientRef.current;
+        console.log(
+          "🔄 Refresh participants required, removing:",
+          data.zoomUserId
+        );
 
-        if (!client) {
-          console.warn("Client not initialized during cleanup");
-          return;
+        if (data.zoomUserId) {
+          setParticipants((prev) => {
+            const filtered = prev.filter(
+              (p) => p.zoomUserId !== data.zoomUserId
+            );
+            console.log(
+              `✅ Filtered out participant. Before: ${prev.length}, After: ${filtered.length}`
+            );
+            return filtered;
+          });
+
+          setParticipantCount((prev) => Math.max(0, prev - 1));
+        } else {
+          console.log("⚠️ No zoomUserId provided, refreshing from Zoom SDK");
+
+          const client = clientRef.current;
+
+          if (!client) {
+            console.warn("Client not initialized");
+            return;
+          }
+
+          const users = client.getAllUser();
+          const mappedParticipants = users.map((user: any, index: number) => ({
+            id: user.userId,
+            name: user.displayName || `Participant ${index + 1}`,
+            zoomUserId: user.userId,
+            type: user.userId === currentZoomUserId ? "user" : "speaker",
+            isCurrentUser: user.userId === currentZoomUserId,
+            isSpeaking: false,
+          }));
+
+          setParticipants(mappedParticipants);
+          setParticipantCount(users.length);
         }
 
-        const users = client.getAllUser();
-        const mappedParticipants = users.map((user: any, index: number) => ({
-          id: user.userId,
-          name: user.displayName || `Participant ${index + 1}`,
-          zoomUserId: user.userId,
-          type: user.userId === currentZoomUserId ? "user" : "speaker",
-          isCurrentUser: user.userId === currentZoomUserId,
-          isSpeaking: false,
-        }));
-        setParticipants(mappedParticipants);
-        setParticipantCount(users.length);
-        console.log("🔄 Final participants refresh before cleanup");
+        console.log("✅ Participants refreshed");
       } catch (error) {
         console.error("Error refreshing participants:", error);
       }
