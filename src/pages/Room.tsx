@@ -670,6 +670,7 @@ const Room = () => {
           sessionID: clientRef.current?.getSessionInfo()?.sessionId,
           jwtToken: "",
           isReconnect: true,
+          zoomUserId: currentZoomUserId,
         });
 
         socket.emit("request-meeting-time", { meetingName });
@@ -677,43 +678,35 @@ const Room = () => {
 
         const client = clientRef.current;
         if (client) {
+          if (
+            currentZoomUserId &&
+            manuallyRemovedUsersRef.current.has(currentZoomUserId)
+          ) {
+            manuallyRemovedUsersRef.current.delete(currentZoomUserId);
+          }
+
           const users = client.getAllUser();
 
-          if (manuallyRemovedUsersRef.current.size > 0) {
-            const filteredUsers = users.filter(
-              (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
-            );
+          const filteredUsers = users.filter(
+            (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
+          );
 
-            setParticipantCount(filteredUsers.length);
+          setParticipantCount(filteredUsers.length);
 
-            const mappedParticipants = filteredUsers.map(
-              (user: any, index: number) => ({
-                id: user.userId,
-                name: user.displayName || `Participant ${index + 1}`,
-                zoomUserId: user.userId,
-                type: user.userId === currentZoomUserId ? "user" : "speaker",
-                isCurrentUser: user.userId === currentZoomUserId,
-                isSpeaking: false,
-              })
-            );
+          const mappedParticipants = filteredUsers.map(
+            (user: any, index: number) => ({
+              id: user.userId,
+              name: user.displayName || `Participant ${index + 1}`,
+              zoomUserId: user.userId,
+              type: user.userId === currentZoomUserId ? "user" : "speaker",
+              isCurrentUser: user.userId === currentZoomUserId,
+              isSpeaking: false,
+            })
+          );
 
-            setParticipants(mappedParticipants);
-          } else {
-            setParticipantCount(users.length);
+          setParticipants(mappedParticipants);
 
-            const mappedParticipants = users.map(
-              (user: any, index: number) => ({
-                id: user.userId,
-                name: user.displayName || `Participant ${index + 1}`,
-                zoomUserId: user.userId,
-                type: user.userId === currentZoomUserId ? "user" : "speaker",
-                isCurrentUser: user.userId === currentZoomUserId,
-                isSpeaking: false,
-              })
-            );
-
-            setParticipants(mappedParticipants);
-          }
+          console.log("🔄 Participants refreshed after reconnection");
         }
       }
     });
@@ -1021,6 +1014,18 @@ const Room = () => {
         });
       };
 
+      const handleUserAdded = (users: any) => {
+        users.forEach((user: any) => {
+          if (manuallyRemovedUsersRef.current.has(user.userId)) {
+            console.log(
+              `✅ Clearing manual removal flag for rejoined user: ${user.userId}`
+            );
+            manuallyRemovedUsersRef.current.delete(user.userId);
+          }
+        });
+        updateParticipants();
+      };
+
       const handleUserRemoved = async (users: any) => {
         const leftUser = users[0];
 
@@ -1049,43 +1054,28 @@ const Room = () => {
       const updateParticipants = () => {
         const users = client.getAllUser();
 
-        if (manuallyRemovedUsersRef.current.size > 0) {
-          const filteredUsers = users.filter(
-            (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
-          );
+        const filteredUsers = users.filter(
+          (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
+        );
 
-          setParticipantCount(filteredUsers.length);
+        setParticipantCount(filteredUsers.length);
 
-          const mappedParticipants = filteredUsers.map(
-            (user: any, index: number) => ({
-              id: user.userId,
-              name: user.displayName || `Participant ${index + 1}`,
-              zoomUserId: user.userId,
-              type: user.userId === currentZoomUserId ? "user" : "speaker",
-              isCurrentUser: user.userId === currentZoomUserId,
-              isSpeaking: false,
-            })
-          );
-
-          setParticipants(mappedParticipants);
-        } else {
-          setParticipantCount(users.length);
-
-          const mappedParticipants = users.map((user: any, index: number) => ({
+        const mappedParticipants = filteredUsers.map(
+          (user: any, index: number) => ({
             id: user.userId,
             name: user.displayName || `Participant ${index + 1}`,
             zoomUserId: user.userId,
             type: user.userId === currentZoomUserId ? "user" : "speaker",
             isCurrentUser: user.userId === currentZoomUserId,
             isSpeaking: false,
-          }));
+          })
+        );
 
-          setParticipants(mappedParticipants);
-        }
+        setParticipants(mappedParticipants);
       };
 
       client.on("active-speaker", handleActiveSpeaker);
-      client.on("user-added", updateParticipants);
+      client.on("user-added", handleUserAdded);
       client.on("user-removed", handleUserRemoved);
       client.on("user-updated", updateParticipants);
 
@@ -1093,7 +1083,7 @@ const Room = () => {
 
       return () => {
         client.off("active-speaker", handleActiveSpeaker);
-        client.off("user-added", updateParticipants);
+        client.off("user-added", handleUserAdded);
         client.off("user-removed", handleUserRemoved);
         client.off("user-updated", updateParticipants);
       };
@@ -1147,12 +1137,13 @@ const Room = () => {
       }
     );
 
-    socket.on("refresh-participants", async (data) => {
-      const client = clientRef.current;
-      if (client) {
-        const users = client.getAllUser();
+    socket.on("participant-reconnected", (data) => {
+      if (manuallyRemovedUsersRef.current.has(data.zoomUserId)) {
+        manuallyRemovedUsersRef.current.delete(data.zoomUserId);
 
-        if (manuallyRemovedUsersRef.current.size > 0) {
+        const client = clientRef.current;
+        if (client) {
+          const users = client.getAllUser();
           const filteredUsers = users.filter(
             (user: any) => !manuallyRemovedUsersRef.current.has(user.userId)
           );
@@ -1171,19 +1162,9 @@ const Room = () => {
           );
 
           setParticipants(mappedParticipants);
-        } else {
-          setParticipantCount(users.length);
-
-          const mappedParticipants = users.map((user: any, index: number) => ({
-            id: user.userId,
-            name: user.displayName || `Participant ${index + 1}`,
-            zoomUserId: user.userId,
-            type: user.userId === currentZoomUserId ? "user" : "speaker",
-            isCurrentUser: user.userId === currentZoomUserId,
-            isSpeaking: false,
-          }));
-
-          setParticipants(mappedParticipants);
+          console.log(
+            "✅ Participants refreshed after reconnection notification"
+          );
         }
       }
     });
